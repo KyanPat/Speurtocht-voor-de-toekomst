@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 const os = require('os');
 const QRCode = require('qrcode');
+const compression = require('compression');
 
 const app = express();
 const server = http.createServer(app);
@@ -12,6 +13,9 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Gzip compressie voor alle HTTP responses (bespaart tot 75% mobiele data)
+app.use(compression());
 
 function getLocalIp() {
   const ifaces = os.networkInterfaces();
@@ -25,8 +29,19 @@ function getLocalIp() {
   return 'localhost';
 }
 
-// Statische bestanden serveren
-app.use(express.static(path.join(__dirname, 'public')));
+// Statische bestanden serveren met slimme caching headers tegen overmatig dataverbruik
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1d',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('sw.js') || filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    } else if (filePath.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|woff2|mp3|wav)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    } else if (filePath.match(/\.(js|css)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
+  }
+}));
 app.use(express.json());
 
 // Routes

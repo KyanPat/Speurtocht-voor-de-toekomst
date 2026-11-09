@@ -65,7 +65,7 @@ const ITEMS_DATA = {
     questionType: 'multiple_choice',
     question: 'Welk dier zie je op de foto bij de collegezaal?',
     subtext: 'Snelle kennisvraag om je diploma te ontgrendelen:',
-    imageUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?auto=format&fit=crop&w=600&q=75',
     imageCaption: 'Fotovraag Collegezaal • Detailopname',
     options: [
       { id: 'opt_a', text: 'Hond', isCorrect: false, letter: 'A' },
