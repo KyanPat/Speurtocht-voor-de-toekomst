@@ -64,9 +64,9 @@ app.get('/api/qr', async (req, res) => {
     const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
     const autoHostUrl = forwardedHost ? `${protocol}://${forwardedHost}/` : null;
 
-    const defaultUrl = process.env.RENDER_EXTERNAL_URL
-      ? `${process.env.RENDER_EXTERNAL_URL}/`
-      : (autoHostUrl || `http://${getLocalIp()}:${PORT}/`);
+    const defaultUrl = (process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL.replace(/\/+$/, '')}/` : null)
+      || autoHostUrl
+      || `http://${getLocalIp()}:${PORT}/`;
 
     const targetUrl = req.query.url || defaultUrl;
 
@@ -85,7 +85,7 @@ app.get('/api/qr', async (req, res) => {
       success: true,
       url: targetUrl,
       defaultUrl,
-      localIp,
+      localIp: getLocalIp(),
       port: PORT,
       svg,
       dataUrl
@@ -97,11 +97,19 @@ app.get('/api/qr', async (req, res) => {
 
 // REST API voor huidige instellingen
 app.get('/api/settings', (req, res) => {
+  const forwardedHost = req.headers['x-forwarded-host'] || req.headers.host;
+  const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+  const autoHostUrl = forwardedHost ? `${protocol}://${forwardedHost}/` : null;
+
+  const joinUrl = (process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL.replace(/\/+$/, '')}/` : null)
+    || autoHostUrl
+    || `http://${getLocalIp()}:${PORT}/`;
+
   res.json({
     success: true,
     localIp: getLocalIp(),
     port: PORT,
-    joinUrl: `http://${getLocalIp()}:${PORT}/`,
+    joinUrl,
     limitedItems: gameState.limitedItems,
     generalItems: gameState.generalItems,
     totalDuration: gameState.totalDuration

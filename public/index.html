@@ -274,24 +274,24 @@
   <script src="/socket.io/socket.io.js"></script>
 
   <!-- Applicatie Scripts met Cache Buster -->
-  <script src="/js/itemsData.js?v=12"></script>
-  <script src="/js/soundEffects.js?v=12"></script>
-  <script src="/js/notifications.js?v=12"></script>
-  <script src="/js/playerApp.js?v=12"></script>
+  <script src="/js/itemsData.js?v=13"></script>
+  <script src="/js/soundEffects.js?v=13"></script>
+  <script src="/js/notifications.js?v=13"></script>
+  <script src="/js/playerApp.js?v=13"></script>
 
   <!-- PWA Service Worker registratie met forceer-update -->
   <script>
     if ('caches' in window) {
       caches.keys().then(keys => {
         keys.forEach(k => {
-          if (k !== 'doomscroll-escape-v12') caches.delete(k);
+          if (k !== 'doomscroll-escape-v13') caches.delete(k);
         });
       });
     }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=12')
+        navigator.serviceWorker.register('/sw.js?v=13')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);

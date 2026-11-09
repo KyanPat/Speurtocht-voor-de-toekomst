@@ -148,18 +148,27 @@
   // QR CODE & LINK BEHEER (ECHTE SCANNABLE QR)
   // ==========================================
   async function setupQrLogic() {
+    // 1. Toon direct de live publieke URL van de browser (werkt op Render.com, lokaal en elk domein)
+    const browserOriginUrl = window.location.origin + '/';
+    state.qrUrl = browserOriginUrl;
+
+    const joinUrlEl = document.getElementById('join-url-display');
+    const settingJoinUrlEl = document.getElementById('setting-join-url');
+    const fsQrUrlEl = document.getElementById('fullscreen-qr-url');
+    const qrBox = document.getElementById('lobby-qr-code-box');
+    const fsQrContainer = document.getElementById('fullscreen-qr-container');
+
+    if (joinUrlEl) joinUrlEl.textContent = browserOriginUrl;
+    if (settingJoinUrlEl) settingJoinUrlEl.value = browserOriginUrl;
+    if (fsQrUrlEl) fsQrUrlEl.textContent = browserOriginUrl;
+
     try {
-      const res = await fetch('/api/qr');
+      // Vraag de QR-code op voor de actuele browser URL (voorkomt localhost op Render)
+      const res = await fetch(`/api/qr?url=${encodeURIComponent(browserOriginUrl)}`);
       const data = await res.json();
       if (data.success) {
         state.qrUrl = data.url;
         state.qrSvg = data.svg;
-
-        const joinUrlEl = document.getElementById('join-url-display');
-        const settingJoinUrlEl = document.getElementById('setting-join-url');
-        const fsQrUrlEl = document.getElementById('fullscreen-qr-url');
-        const qrBox = document.getElementById('lobby-qr-code-box');
-        const fsQrContainer = document.getElementById('fullscreen-qr-container');
 
         if (joinUrlEl) joinUrlEl.textContent = data.url;
         if (settingJoinUrlEl) settingJoinUrlEl.value = data.url;
@@ -188,7 +197,6 @@
     }
 
     // Klikken op QR om te vergroten voor beamer
-    const qrBox = document.getElementById('lobby-qr-code-box');
     const btnEnlargeQr = document.getElementById('btn-enlarge-qr');
     const btnCloseFsQr = document.getElementById('btn-close-qr-fullscreen');
     const btnDoneFsQr = document.getElementById('btn-done-qr');
