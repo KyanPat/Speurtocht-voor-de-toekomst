@@ -66,8 +66,8 @@ console.log('✓ Profiel "Volgend" opent lijst met gevolgde accounts:', hasProfi
 
 // 8. Controleer Cache Busters
 console.log('\n[Check 8] Cache Busters in index.html:');
-const isCacheV12 = indexHtml.includes('?v=12') && indexHtml.includes('doomscroll-escape-v12');
-console.log('✓ Alle scripts geüpgraded naar ?v=12 en service worker v12:', isCacheV12);
+const isCacheV13 = indexHtml.includes('?v=13') && indexHtml.includes('doomscroll-escape-v13');
+console.log('✓ Alle scripts geüpgraded naar ?v=13 en service worker v13:', isCacheV13);
 
 // 9. Controleer Like, Dislike, Oma Foto Reel en Stippellijn
 console.log('\n[Check 9] Like/Dislike, Klikbare Oma Foto en Stippellijn door alle objectives:');
@@ -79,5 +79,16 @@ console.log('✓ HandleGlobalLike en HandleGlobalDislike aanwezig en gekoppeld:'
 console.log('✓ TikTok Like en Dislike acties aanwezig:', hasTikTokLikeDislike);
 console.log('✓ Klikbare foto van oma in chat moeder opent reel:', hasClickableOmaPhoto);
 console.log('✓ Dynamisch avonturenpad SVG en updateAdventureTrail berekend door objectives:', hasDynamicTrail);
+
+// 10. Controleer Groot Scherm / Fullscreen functionaliteit voor telefoon
+console.log('\n[Check 10] Groot Scherm / Fullscreen Telefoon Knoppen:');
+const hasFsToggleBtn = indexHtml.includes('id="btn-fullscreen-toggle"');
+const hasFsLoginBtn = indexHtml.includes('id="btn-login-fullscreen"');
+const hasFsLobbyBtn = indexHtml.includes('id="btn-lobby-fullscreen"');
+const hasFsLogic = playerAppJs.includes('setupFullscreenHandler') && playerAppJs.includes('toggleFullScreen');
+console.log('✓ Knop in gameplay header aanwezig:', hasFsToggleBtn);
+console.log('✓ Knop in login scherm aanwezig:', hasFsLoginBtn);
+console.log('✓ Knop in lobby scherm aanwezig:', hasFsLobbyBtn);
+console.log('✓ Fullscreen handler en toggleFullScreen functie aanwezig:', hasFsLogic);
 
 console.log('\n--- ALLE CONTROLES MET SUCCES AFGEROND! ---');

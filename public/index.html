@@ -60,6 +60,12 @@
     <!-- SCHERM 1: LOGIN / NAAM INVOEREN (MOBIELE VIEW) -->
     <!-- ============================================== -->
     <section id="screen-login" class="flex-1 flex flex-col justify-center items-center px-6 py-8 relative z-10">
+      <!-- Groot Scherm Knop Bovenin Login -->
+      <button id="btn-login-fullscreen" type="button" class="absolute top-4 right-4 z-20 flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/90 hover:bg-white text-stone-800 text-[11px] font-bold shadow border border-stone-200 backdrop-blur transition active:scale-95 cursor-pointer" title="Volledig scherm (Inzoomen)">
+        <span class="material-symbols-outlined text-base text-primary fullscreen-icon-elem">fullscreen</span>
+        <span>Groot scherm</span>
+      </button>
+
       <div class="w-full max-w-[340px] bg-white/95 rounded-3xl p-6 shadow-xl border border-stone-200 text-center flex flex-col items-center">
         <!-- Logo / Icon -->
         <div class="relative w-20 h-20 bg-parchment-light rounded-2xl flex items-center justify-center shadow-md mb-4 border border-stone-300">
@@ -106,6 +112,12 @@
     <!-- SCHERM 1B: LOBBY WACHTRUIMTE (MOBIELE VIEW)    -->
     <!-- ============================================== -->
     <section id="screen-lobby-wait" class="hidden flex-1 flex flex-col justify-center items-center px-6 py-8 relative z-10 text-center">
+      <!-- Groot Scherm Knop Bovenin Lobby -->
+      <button id="btn-lobby-fullscreen" type="button" class="absolute top-4 right-4 z-20 flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/90 hover:bg-white text-stone-800 text-[11px] font-bold shadow border border-stone-200 backdrop-blur transition active:scale-95 cursor-pointer" title="Volledig scherm (Inzoomen)">
+        <span class="material-symbols-outlined text-base text-primary fullscreen-icon-elem">fullscreen</span>
+        <span>Groot scherm</span>
+      </button>
+
       <div class="w-full max-w-[340px] bg-white/95 rounded-3xl p-6 shadow-xl border border-stone-200 flex flex-col items-center">
         <!-- Radar Pulsing Icon -->
         <div class="relative w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-4 border-2 border-emerald-300">
@@ -159,14 +171,19 @@
           </div>
         </div>
 
-        <!-- Focus Meter & Timer -->
-        <div class="flex items-center gap-2">
+        <!-- Focus Meter, Fullscreen & Timer -->
+        <div class="flex items-center gap-1.5">
           <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-stone-900/10 text-xs font-mono font-bold text-stone-800">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span id="bar-timer">15:00</span>
           </div>
+
+          <!-- Knop voor Groot Scherm / Volledig Scherm op Telefoon -->
+          <button id="btn-fullscreen-toggle" aria-label="Groot scherm" class="w-7 h-7 rounded-full bg-stone-900/10 hover:bg-stone-900/20 active:scale-95 flex items-center justify-center text-stone-800 transition cursor-pointer" type="button" title="Volledig scherm (Inzoomen)">
+            <span class="material-symbols-outlined text-[18px] fullscreen-icon-elem" id="fullscreen-icon">fullscreen</span>
+          </button>
           
-          <button id="btn-open-rules" aria-label="Spelregels" class="w-7 h-7 rounded-full bg-stone-900/10 hover:bg-stone-900/20 active:scale-95 flex items-center justify-center font-bold text-xs text-stone-800 transition" type="button" title="Spelregels">
+          <button id="btn-open-rules" aria-label="Spelregels" class="w-7 h-7 rounded-full bg-stone-900/10 hover:bg-stone-900/20 active:scale-95 flex items-center justify-center font-bold text-xs text-stone-800 transition cursor-pointer" type="button" title="Spelregels">
             ?
           </button>
         </div>

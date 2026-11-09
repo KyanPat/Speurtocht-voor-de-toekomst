@@ -61,6 +61,7 @@
     setupAvatarPicker();
     setupLoginHandler();
     setupTrapExitHandler();
+    setupFullscreenHandler();
     setupRulesHandler();
     setupBackdropDismiss();
     window.addEventListener('resize', updateAdventureTrail);
@@ -2849,6 +2850,101 @@
   }
 
   // ==========================================
+  // VOLLEDIG SCHERM (GROOT SCHERM OP MOBIEL)
+  // ==========================================
+  function isCurrentlyFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement || document.body.classList.contains('app-fullscreen'));
+  }
+
+  function updateFullscreenIcons() {
+    const isFs = isCurrentlyFullscreen();
+    const icons = document.querySelectorAll('.fullscreen-icon-elem');
+    icons.forEach(icon => {
+      icon.textContent = isFs ? 'fullscreen_exit' : 'fullscreen';
+    });
+  }
+
+  function toggleFullScreen() {
+    const docEl = document.documentElement;
+    const isFs = isCurrentlyFullscreen();
+
+    if (!isFs) {
+      let p = null;
+      if (docEl.requestFullscreen) {
+        p = docEl.requestFullscreen();
+      } else if (docEl.webkitRequestFullscreen) {
+        p = docEl.webkitRequestFullscreen();
+      } else if (docEl.mozRequestFullScreen) {
+        p = docEl.mozRequestFullScreen();
+      } else if (docEl.msRequestFullscreen) {
+        p = docEl.msRequestFullscreen();
+      }
+
+      if (p && p.catch) {
+        p.catch(() => {
+          document.body.classList.add('app-fullscreen');
+          updateFullscreenIcons();
+        });
+      }
+      document.body.classList.add('app-fullscreen');
+      showToast('📱 Groot scherm geactiveerd! (Ingezoomd)');
+    } else {
+      let p = null;
+      if (document.exitFullscreen) {
+        p = document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        p = document.webkitExitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        p = document.mozCancelFullScreen();
+      } else if (document.msExitFullscreen) {
+        p = document.msExitFullscreen();
+      }
+
+      if (p && p.catch) {
+        p.catch(() => {});
+      }
+      document.body.classList.remove('app-fullscreen');
+      showToast('Groot scherm gesloten');
+    }
+
+    updateFullscreenIcons();
+    setTimeout(updateAdventureTrail, 100);
+    setTimeout(updateAdventureTrail, 350);
+  }
+
+  function setupFullscreenHandler() {
+    const fsBtns = [
+      document.getElementById('btn-fullscreen-toggle'),
+      document.getElementById('btn-login-fullscreen'),
+      document.getElementById('btn-lobby-fullscreen')
+    ];
+
+    fsBtns.forEach(btn => {
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (window.sounds) window.sounds.playClick();
+          toggleFullScreen();
+        });
+      }
+    });
+
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
+      document.addEventListener(evt, () => {
+        const nativeFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        if (nativeFs) {
+          document.body.classList.add('app-fullscreen');
+        } else {
+          document.body.classList.remove('app-fullscreen');
+        }
+        updateFullscreenIcons();
+        setTimeout(updateAdventureTrail, 80);
+        setTimeout(updateAdventureTrail, 300);
+      });
+    });
+  }
+
+  // ==========================================
   // SPELREGELS & MODALS
   // ==========================================
   function setupRulesHandler() {
@@ -3009,6 +3105,7 @@
     toggleTikTokLike,
     toggleTikTokDislike,
     updateAdventureTrail,
+    toggleFullScreen,
     showCommentMock: () => openInstagramComments('Bericht', 'instagram'),
     showShareMock: () => {
       if (window.sounds) window.sounds.playClick();

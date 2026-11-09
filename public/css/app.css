@@ -145,3 +145,28 @@
   animation: heartPop 0.85s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+/* Volledig Scherm & Ingezoomd op Telefoon */
+:fullscreen #app-container,
+:-webkit-full-screen #app-container,
+.app-fullscreen #app-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  border-left: none !important;
+  border-right: none !important;
+  box-shadow: none !important;
+}
+
+:fullscreen body,
+:-webkit-full-screen body,
+.app-fullscreen body {
+  background-color: #ebd8b8 !important;
+}
+
+/* Soepele centrering voor speelveldkaarten in fullscreen */
+.app-fullscreen #map-cards-container {
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
