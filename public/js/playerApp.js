@@ -2850,66 +2850,85 @@
   }
 
   // ==========================================
-  // VOLLEDIG SCHERM (GROOT SCHERM OP MOBIEL)
+  // VOLLEDIG SCHERM & INGEZOOMD OP MOBIEL
   // ==========================================
+  let isZoomedActive = false;
+
   function isCurrentlyFullscreen() {
-    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement || document.body.classList.contains('app-fullscreen'));
+    return isZoomedActive || !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement || document.body.classList.contains('zoom-mode'));
   }
 
   function updateFullscreenIcons() {
     const isFs = isCurrentlyFullscreen();
     const icons = document.querySelectorAll('.fullscreen-icon-elem');
     icons.forEach(icon => {
-      icon.textContent = isFs ? 'fullscreen_exit' : 'fullscreen';
+      icon.textContent = isFs ? 'zoom_out' : 'zoom_in';
     });
+
+    const fsText = document.getElementById('fullscreen-text');
+    if (fsText) fsText.textContent = isFs ? 'Klein' : 'Groot';
+
+    const loginText = document.getElementById('login-fullscreen-text');
+    if (loginText) loginText.textContent = isFs ? 'Normaal' : 'Groot scherm';
+
+    const lobbyText = document.getElementById('lobby-fullscreen-text');
+    if (lobbyText) lobbyText.textContent = isFs ? 'Normaal' : 'Groot scherm';
   }
 
   function toggleFullScreen() {
+    isZoomedActive = !isZoomedActive;
     const docEl = document.documentElement;
-    const isFs = isCurrentlyFullscreen();
 
-    if (!isFs) {
-      let p = null;
-      if (docEl.requestFullscreen) {
-        p = docEl.requestFullscreen();
-      } else if (docEl.webkitRequestFullscreen) {
-        p = docEl.webkitRequestFullscreen();
-      } else if (docEl.mozRequestFullScreen) {
-        p = docEl.mozRequestFullScreen();
-      } else if (docEl.msRequestFullscreen) {
-        p = docEl.msRequestFullscreen();
-      }
-
-      if (p && p.catch) {
-        p.catch(() => {
-          document.body.classList.add('app-fullscreen');
-          updateFullscreenIcons();
-        });
-      }
+    // 1. Visuele zoom modus (vergroot de kaarten en inhoud tot rand van de telefoon)
+    if (isZoomedActive) {
+      document.body.classList.add('zoom-mode');
       document.body.classList.add('app-fullscreen');
-      showToast('📱 Groot scherm geactiveerd! (Ingezoomd)');
     } else {
-      let p = null;
-      if (document.exitFullscreen) {
-        p = document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        p = document.webkitExitFullscreen();
-      } else if (document.mozCancelFullScreen) {
-        p = document.mozCancelFullScreen();
-      } else if (document.msExitFullscreen) {
-        p = document.msExitFullscreen();
-      }
-
-      if (p && p.catch) {
-        p.catch(() => {});
-      }
+      document.body.classList.remove('zoom-mode');
       document.body.classList.remove('app-fullscreen');
-      showToast('Groot scherm gesloten');
     }
 
+    // 2. Hardware / Browser Native Fullscreen (voor Android Chrome, tablet en desktop)
+    try {
+      const isNativeFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+      if (isZoomedActive && !isNativeFs) {
+        if (docEl.requestFullscreen) {
+          docEl.requestFullscreen().catch(() => {});
+        } else if (docEl.webkitRequestFullscreen) {
+          docEl.webkitRequestFullscreen();
+        } else if (document.body.webkitRequestFullscreen) {
+          document.body.webkitRequestFullscreen();
+        }
+      } else if (!isZoomedActive && isNativeFs) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    } catch (e) {
+      console.warn('Native Fullscreen API niet ondersteund door browser:', e);
+    }
+
+    // 3. Update alle knoppen en teksten
     updateFullscreenIcons();
-    setTimeout(updateAdventureTrail, 100);
-    setTimeout(updateAdventureTrail, 350);
+
+    // 4. Feedback voor de gebruiker (met tip voor iOS Safari)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isZoomedActive) {
+      if (isIOS && !window.navigator.standalone) {
+        showToast('🔍 Ingezoomd! (Tip: Safari Deel ➔ Zet op beginscherm)');
+      } else {
+        showToast('🔍 Groot scherm & Ingezoomd!');
+      }
+    } else {
+      showToast('🔎 Normaal schermformaat');
+    }
+
+    // 5. Herbereken de stippellijn direct voor de nieuwe afmetingen
+    setTimeout(updateAdventureTrail, 60);
+    setTimeout(updateAdventureTrail, 200);
+    setTimeout(updateAdventureTrail, 500);
   }
 
   function setupFullscreenHandler() {
@@ -2933,8 +2952,13 @@
       document.addEventListener(evt, () => {
         const nativeFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
         if (nativeFs) {
+          isZoomedActive = true;
+          document.body.classList.add('zoom-mode');
           document.body.classList.add('app-fullscreen');
         } else {
+          // Als de gebruiker hardwarematig fullscreen verlaat
+          isZoomedActive = false;
+          document.body.classList.remove('zoom-mode');
           document.body.classList.remove('app-fullscreen');
         }
         updateFullscreenIcons();

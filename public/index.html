@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ebd8b8">
@@ -60,10 +60,10 @@
     <!-- SCHERM 1: LOGIN / NAAM INVOEREN (MOBIELE VIEW) -->
     <!-- ============================================== -->
     <section id="screen-login" class="flex-1 flex flex-col justify-center items-center px-6 py-8 relative z-10">
-      <!-- Groot Scherm Knop Bovenin Login -->
-      <button id="btn-login-fullscreen" type="button" class="absolute top-4 right-4 z-20 flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/90 hover:bg-white text-stone-800 text-[11px] font-bold shadow border border-stone-200 backdrop-blur transition active:scale-95 cursor-pointer" title="Volledig scherm (Inzoomen)">
-        <span class="material-symbols-outlined text-base text-primary fullscreen-icon-elem">fullscreen</span>
-        <span>Groot scherm</span>
+      <!-- Groot Scherm / Inzoomen Knop Bovenin Login -->
+      <button id="btn-login-fullscreen" type="button" class="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold shadow-md transition active:scale-95 cursor-pointer" title="Groot scherm (Inzoomen)">
+        <span class="material-symbols-outlined text-[17px] fullscreen-icon-elem">zoom_in</span>
+        <span id="login-fullscreen-text">Groot scherm</span>
       </button>
 
       <div class="w-full max-w-[340px] bg-white/95 rounded-3xl p-6 shadow-xl border border-stone-200 text-center flex flex-col items-center">
@@ -112,10 +112,10 @@
     <!-- SCHERM 1B: LOBBY WACHTRUIMTE (MOBIELE VIEW)    -->
     <!-- ============================================== -->
     <section id="screen-lobby-wait" class="hidden flex-1 flex flex-col justify-center items-center px-6 py-8 relative z-10 text-center">
-      <!-- Groot Scherm Knop Bovenin Lobby -->
-      <button id="btn-lobby-fullscreen" type="button" class="absolute top-4 right-4 z-20 flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/90 hover:bg-white text-stone-800 text-[11px] font-bold shadow border border-stone-200 backdrop-blur transition active:scale-95 cursor-pointer" title="Volledig scherm (Inzoomen)">
-        <span class="material-symbols-outlined text-base text-primary fullscreen-icon-elem">fullscreen</span>
-        <span>Groot scherm</span>
+      <!-- Groot Scherm / Inzoomen Knop Bovenin Lobby -->
+      <button id="btn-lobby-fullscreen" type="button" class="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold shadow-md transition active:scale-95 cursor-pointer" title="Groot scherm (Inzoomen)">
+        <span class="material-symbols-outlined text-[17px] fullscreen-icon-elem">zoom_in</span>
+        <span id="lobby-fullscreen-text">Groot scherm</span>
       </button>
 
       <div class="w-full max-w-[340px] bg-white/95 rounded-3xl p-6 shadow-xl border border-stone-200 flex flex-col items-center">
@@ -178,9 +178,10 @@
             <span id="bar-timer">15:00</span>
           </div>
 
-          <!-- Knop voor Groot Scherm / Volledig Scherm op Telefoon -->
-          <button id="btn-fullscreen-toggle" aria-label="Groot scherm" class="w-7 h-7 rounded-full bg-stone-900/10 hover:bg-stone-900/20 active:scale-95 flex items-center justify-center text-stone-800 transition cursor-pointer" type="button" title="Volledig scherm (Inzoomen)">
-            <span class="material-symbols-outlined text-[18px] fullscreen-icon-elem" id="fullscreen-icon">fullscreen</span>
+          <!-- Knop voor Groot Scherm / Inzoomen op Telefoon -->
+          <button id="btn-fullscreen-toggle" aria-label="Groot scherm" class="h-7 px-2.5 rounded-full bg-emerald-700 hover:bg-emerald-800 active:scale-95 flex items-center gap-1 text-white text-[11px] font-bold shadow-sm transition cursor-pointer" type="button" title="Groot scherm & Inzoomen">
+            <span class="material-symbols-outlined text-[17px] fullscreen-icon-elem" id="fullscreen-icon">zoom_in</span>
+            <span id="fullscreen-text" class="text-[10px]">Groot</span>
           </button>
           
           <button id="btn-open-rules" aria-label="Spelregels" class="w-7 h-7 rounded-full bg-stone-900/10 hover:bg-stone-900/20 active:scale-95 flex items-center justify-center font-bold text-xs text-stone-800 transition cursor-pointer" type="button" title="Spelregels">
@@ -291,24 +292,24 @@
   <script src="/socket.io/socket.io.js"></script>
 
   <!-- Applicatie Scripts met Cache Buster -->
-  <script src="/js/itemsData.js?v=13"></script>
-  <script src="/js/soundEffects.js?v=13"></script>
-  <script src="/js/notifications.js?v=13"></script>
-  <script src="/js/playerApp.js?v=13"></script>
+  <script src="/js/itemsData.js?v=14"></script>
+  <script src="/js/soundEffects.js?v=14"></script>
+  <script src="/js/notifications.js?v=14"></script>
+  <script src="/js/playerApp.js?v=14"></script>
 
   <!-- PWA Service Worker registratie met forceer-update -->
   <script>
     if ('caches' in window) {
       caches.keys().then(keys => {
         keys.forEach(k => {
-          if (k !== 'doomscroll-escape-v13') caches.delete(k);
+          if (k !== 'doomscroll-escape-v14') caches.delete(k);
         });
       });
     }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=13')
+        navigator.serviceWorker.register('/sw.js?v=14')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);

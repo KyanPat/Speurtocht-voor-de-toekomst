@@ -145,13 +145,29 @@
   animation: heartPop 0.85s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-/* Volledig Scherm & Ingezoomd op Telefoon */
+/* Mobiele Standaard: Geen donkere zijbalken op smartphones */
+@media (max-width: 640px) {
+  body {
+    background-color: #ebd8b8 !important;
+  }
+  #app-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-left: none !important;
+    border-right: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Volledig Scherm & Ingezoomde Modus */
 :fullscreen #app-container,
 :-webkit-full-screen #app-container,
-.app-fullscreen #app-container {
+.app-fullscreen #app-container,
+.zoom-mode #app-container {
   max-width: 100% !important;
   width: 100% !important;
   min-height: 100vh !important;
+  min-height: 100dvh !important;
   border-left: none !important;
   border-right: none !important;
   box-shadow: none !important;
@@ -159,13 +175,32 @@
 
 :fullscreen body,
 :-webkit-full-screen body,
-.app-fullscreen body {
+.app-fullscreen body,
+.zoom-mode body {
   background-color: #ebd8b8 !important;
 }
 
-/* Soepele centrering voor speelveldkaarten in fullscreen */
-.app-fullscreen #map-cards-container {
-  max-width: 480px;
+/* Kaarten worden flink groter en vullen de telefoon in zoom-modus */
+.zoom-mode .polaroid-card {
+  width: min(240px, 80vw) !important;
+  padding: 13px !important;
+  box-shadow: 0 14px 28px -4px rgba(58, 43, 26, 0.35), 0 5px 10px -2px rgba(58, 43, 26, 0.2) !important;
+}
+
+.zoom-mode .polaroid-card .font-bold {
+  font-size: 1.05rem !important;
+}
+
+.zoom-mode .polaroid-card p {
+  font-size: 0.85rem !important;
+  line-height: 1.3 !important;
+}
+
+.zoom-mode #map-cards-container {
+  row-gap: 2.25rem !important;
+  padding-top: 1rem !important;
+  padding-bottom: 2.5rem !important;
+  max-width: 520px;
   margin-left: auto;
   margin-right: auto;
 }

@@ -1,5 +1,5 @@
-// Service Worker voor Doomscroll Escape PWA (v13 - Data Saver & Dynamic Host)
-const CACHE_NAME = 'doomscroll-escape-v13';
+// Service Worker voor Doomscroll Escape PWA (v14 - Zoom & Fullscreen Support)
+const CACHE_NAME = 'doomscroll-escape-v14';
 
 // Essentiële core bestanden voor offline werking en data-besparing
 const CORE_ASSETS = [
@@ -8,10 +8,10 @@ const CORE_ASSETS = [
   '/digibord.html',
   '/manifest.json',
   '/css/app.css',
-  '/js/itemsData.js?v=13',
-  '/js/playerApp.js?v=13',
-  '/js/soundEffects.js?v=13',
-  '/js/notifications.js?v=13',
+  '/js/itemsData.js?v=14',
+  '/js/playerApp.js?v=14',
+  '/js/soundEffects.js?v=14',
+  '/js/notifications.js?v=14',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon.svg'
