@@ -57,11 +57,17 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'digibord.html'));
 });
 
-// REST API voor echte QR Code (dynamisch voor lokale IP of custom URL)
+// REST API voor echte QR Code (dynamisch voor lokale IP, Render URL of custom URL)
 app.get('/api/qr', async (req, res) => {
   try {
-    const localIp = getLocalIp();
-    const defaultUrl = `http://${localIp}:${PORT}/`;
+    const forwardedHost = req.headers['x-forwarded-host'] || req.headers.host;
+    const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+    const autoHostUrl = forwardedHost ? `${protocol}://${forwardedHost}/` : null;
+
+    const defaultUrl = process.env.RENDER_EXTERNAL_URL
+      ? `${process.env.RENDER_EXTERNAL_URL}/`
+      : (autoHostUrl || `http://${getLocalIp()}:${PORT}/`);
+
     const targetUrl = req.query.url || defaultUrl;
 
     const svg = await QRCode.toString(targetUrl, {
