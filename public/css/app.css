@@ -1,0 +1,147 @@
+/* Doomscroll Escape - Algemene Stijlen en Thema */
+
+@layer base {
+  html, body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Subtiel perkament en topografisch raster */
+.bg-parchment-pattern {
+  background-color: #ebd8b8;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(216, 190, 150, 0.45) 0%, rgba(216, 190, 150, 0) 45%),
+    radial-gradient(circle at 90% 65%, rgba(194, 163, 117, 0.35) 0%, rgba(194, 163, 117, 0) 50%),
+    linear-gradient(rgba(176, 142, 94, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(176, 142, 94, 0.12) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+}
+
+/* Polaroid speelkaart met papier-schaduw */
+.polaroid-card {
+  background: #FFFFFF;
+  box-shadow: 0 10px 22px -5px rgba(58, 43, 26, 0.28), 0 3px 6px -2px rgba(58, 43, 26, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.polaroid-card:active {
+  transform: scale(0.97) rotate(0deg) !important;
+  box-shadow: 0 4px 10px -2px rgba(58, 43, 26, 0.22);
+}
+
+.polaroid-claimed {
+  opacity: 0.82;
+  filter: grayscale(0.2);
+  border: 2px solid #059669 !important;
+}
+
+.polaroid-depleted {
+  opacity: 0.55;
+  filter: grayscale(0.85);
+  cursor: not-allowed !important;
+  text-decoration: line-through;
+}
+
+/* Mobiele safe-area ondersteuning voor iOS en Android inkepingen */
+.safe-top {
+  padding-top: max(env(safe-area-inset-top), 16px);
+}
+
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+/* Verberg scrollbars voor soepele mobiele ervaring */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Animaties */
+@keyframes pulseSubtle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 2.5s infinite ease-in-out;
+}
+
+@keyframes bounceLike {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+.like-bounce {
+  animation: bounceLike 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* TikTok Video Snap Feed */
+.snap-feed-container {
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.snap-feed-item {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+/* Scanlines overlay */
+.scanline-effect {
+  background: linear-gradient(rgba(17,19,24,0) 50%, rgba(0,0,0,0.4) 50%);
+  background-size: 100% 4px;
+}
+
+/* Toast banners */
+.toast-slide-down {
+  animation: toastSlide 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes toastSlide {
+  from { transform: translateY(-120%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Shake animatie bij foutieve code */
+@keyframes shakeInput {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.shake {
+  animation: shakeInput 0.4s ease-in-out;
+}
+
+/* Instagram en Social Media Custom Stijlen */
+@import url('https://fonts.googleapis.com/css2?family=Grand+Hotel&display=swap');
+
+.font-instagram {
+  font-family: 'Grand Hotel', cursive, sans-serif;
+}
+
+.story-ring-gradient {
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+}
+
+@keyframes heartPop {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  45% { transform: translate(-50%, -50%) scale(1.35); opacity: 0.95; }
+  75% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0; }
+}
+
+.animate-heart-pop {
+  animation: heartPop 0.85s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+

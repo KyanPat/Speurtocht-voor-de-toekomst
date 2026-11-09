@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#ebd8b8">
+  <title>Doomscroll Escape - Speurtocht voor de Toekomst</title>
+  
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+  <!-- Google Fonts & Material Symbols -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@1,600&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN met plugins -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            parchment: {
+              DEFAULT: '#EBD8B8',
+              light: '#F4E8D1',
+              dark: '#D8BE96',
+              shadow: '#C2A375'
+            },
+            primary: '#059669',
+            'primary-dark': '#047857',
+            coral: '#FF4D6D',
+            gold: '#F59E0B',
+            ink: '#231B12'
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            serif: ['"Playfair Display"', 'Georgia', 'serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+            display: ['"Space Grotesk"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Eigen thema en animatie CSS -->
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="bg-[#1f1a14] text-[#2c2419] flex justify-center min-h-screen selection:bg-[#c2a375] selection:text-white font-sans antialiased overflow-x-hidden">
+
+  <!-- Mobiele Telefoon Container (Max 430px breed) -->
+  <div id="app-container" class="relative w-full max-w-[430px] min-h-screen bg-parchment-pattern flex flex-col justify-between overflow-x-hidden shadow-2xl border-x border-[#c2a375]/30">
+
+    <!-- ============================================== -->
+    <!-- SCHERM 1: LOGIN / NAAM INVOEREN (MOBIELE VIEW) -->
+    <!-- ============================================== -->
+    <section id="screen-login" class="flex-1 flex flex-col justify-center items-center px-6 py-8 relative z-10">
+      <div class="w-full max-w-[340px] bg-white/95 rounded-3xl p-6 shadow-xl border border-stone-200 text-center flex flex-col items-center">
+        <!-- Logo / Icon -->
+        <div class="relative w-20 h-20 bg-parchment-light rounded-2xl flex items-center justify-center shadow-md mb-4 border border-stone-300">
+          <span class="material-symbols-outlined text-[#059669] text-4xl" style="font-variation-settings: 'FILL' 1;">explore</span>
+          <span class="absolute -top-2 -right-2 bg-coral text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full shadow">Escape!</span>
+        </div>
+
+        <h1 class="font-display text-2xl font-black text-stone-900 leading-tight">Doomscroll Escape</h1>
+        <p class="text-xs text-stone-600 mt-1 mb-5 font-medium">Speurtocht voor de toekomst • Ontsnap aan de schermvalstrikken!</p>
+
+        <!-- Naam Invoerveld -->
+        <div class="w-full text-left mb-4">
+          <label for="player-name-input" class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">Jouw Naam</label>
+          <input id="player-name-input" type="text" maxlength="18" placeholder="Bijv. Lucas, Sarah..." class="w-full px-4 py-3 rounded-xl border border-stone-300 bg-stone-50 font-semibold text-stone-900 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition text-sm">
+        </div>
+
+        <!-- Avatar Kiezer -->
+        <div class="w-full text-left mb-5">
+          <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">Kies je Avatar</label>
+          <div id="avatar-picker" class="flex justify-between items-center bg-stone-100 p-1.5 rounded-xl border border-stone-200">
+            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center bg-white shadow-sm ring-2 ring-primary transition" data-avatar="🎒">🎒</button>
+            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition" data-avatar="🦊">🦊</button>
+            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition" data-avatar="⚡">⚡</button>
+            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition" data-avatar="🚀">🚀</button>
+            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition" data-avatar="🎯">🎯</button>
+            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition" data-avatar="🧭">🧭</button>
+          </div>
+        </div>
+
+        <!-- Join Knop -->
+        <button id="btn-join-game" type="button" class="w-full py-3.5 px-6 rounded-xl bg-primary hover:bg-primary-dark active:scale-[0.98] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2">
+          <span>Doe mee met de speurtocht</span>
+          <span class="material-symbols-outlined text-base">arrow_forward</span>
+        </button>
+
+        <!-- Handige shortcut naar Digibord voor testen -->
+        <a href="/digibord" target="_blank" class="mt-4 text-[11px] text-stone-500 hover:text-stone-800 underline flex items-center justify-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">tv</span> Open Digibord scherm (voor docent)
+        </a>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- SCHERM 1B: LOBBY WACHTRUIMTE (MOBIELE VIEW)    -->
+    <!-- ============================================== -->
+    <section id="screen-lobby-wait" class="hidden flex-1 flex flex-col justify-center items-center px-6 py-8 relative z-10 text-center">
+      <div class="w-full max-w-[340px] bg-white/95 rounded-3xl p-6 shadow-xl border border-stone-200 flex flex-col items-center">
+        <!-- Radar Pulsing Icon -->
+        <div class="relative w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-4 border-2 border-emerald-300">
+          <span class="absolute inset-0 rounded-full bg-emerald-400/30 animate-ping"></span>
+          <span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">wifi_tethering</span>
+        </div>
+
+        <h2 class="font-display text-xl font-bold text-stone-900">Welkom in de lobby, <span id="wait-player-name" class="text-primary">Speler</span>!</h2>
+        <p class="text-xs text-stone-600 mt-1 mb-4">De spelleider start het spel zo dadelijk op het Digibord.</p>
+
+        <!-- Spelers in Lobby -->
+        <div class="w-full bg-stone-50 rounded-xl p-3 border border-stone-200 mb-4 text-left">
+          <div class="flex items-center justify-between text-[11px] font-bold text-stone-700 uppercase tracking-wider mb-2">
+            <span>Aanwezige Spelers</span>
+            <span id="wait-player-count" class="bg-primary/10 text-primary px-2 py-0.5 rounded-full">1 speler</span>
+          </div>
+          <div id="wait-players-list" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+            <!-- Dynamisch gevuld -->
+          </div>
+        </div>
+
+        <div class="w-full bg-amber-50 rounded-xl p-3 border border-amber-200/80 text-[11px] text-amber-900 leading-snug flex items-start gap-2 text-left">
+          <span class="material-symbols-outlined text-amber-600 text-lg shrink-0 mt-0.5">lightbulb</span>
+          <span><b>Speltip:</b> Pas op voor video-hints! Ze pauzeren je straftijd niet en kosten kostbare minuten.</span>
+        </div>
+
+        <!-- Handige link naar Digibord / Vindplekken -->
+        <div class="mt-4 pt-3 border-t border-stone-200/80 w-full flex items-center justify-between text-[11px] text-stone-500">
+          <a href="/digibord" target="_blank" class="hover:text-stone-800 underline flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">tv</span> Digibord / QR
+          </a>
+          <button id="btn-mobile-view-locations" type="button" class="hover:text-stone-800 underline flex items-center gap-1 font-semibold">
+            <span class="material-symbols-outlined text-[14px]">pin_drop</span> Bekijk Vindplekken
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- SCHERM 2: SPEELVELD KAART (SCREEN_4 / SPEELVELD)-->
+    <!-- ============================================== -->
+    <div id="screen-gameplay" class="hidden flex-1 flex flex-col justify-between relative min-h-screen">
+      
+      <!-- Top Status Balk -->
+      <header class="safe-top sticky top-0 z-30 px-4 pb-2.5 backdrop-blur-md bg-parchment-light/90 border-b border-parchment-shadow/30 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span id="bar-avatar" class="text-xl">🎒</span>
+          <div class="flex flex-col">
+            <span id="bar-name" class="text-xs font-bold text-stone-900 leading-none">Speler</span>
+            <span id="bar-score" class="text-[10px] font-extrabold text-primary leading-none mt-0.5">0 Punten</span>
+          </div>
+        </div>
+
+        <!-- Focus Meter & Timer -->
+        <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-stone-900/10 text-xs font-mono font-bold text-stone-800">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="bar-timer">15:00</span>
+          </div>
+          
+          <button id="btn-open-rules" aria-label="Spelregels" class="w-7 h-7 rounded-full bg-stone-900/10 hover:bg-stone-900/20 active:scale-95 flex items-center justify-center font-bold text-xs text-stone-800 transition" type="button" title="Spelregels">
+            ?
+          </button>
+        </div>
+      </header>
+
+      <!-- Hoofd Kaart met Kronkelend Pad -->
+      <main class="relative flex-1 py-6 px-4" data-purpose="adventure-trail-canvas">
+        <!-- SVG Winding Dashed Trail (Dynamisch verbonden door elk objective in playerApp.js) -->
+        <svg id="adventure-trail-svg" class="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path id="trail-path-glow" d="" fill="none" stroke="rgba(194, 163, 117, 0.45)" stroke-linecap="round" stroke-width="26"></path>
+          <path id="trail-path-dashed" d="" fill="none" stroke="#7F6244" stroke-dasharray="9 10" stroke-linecap="round" stroke-width="5.5"></path>
+        </svg>
+
+        <!-- Kaarten langs het pad container -->
+        <div id="map-cards-container" class="relative z-10 space-y-7 pb-8">
+          <!-- Dynamisch opgebouwd in playerApp.js -->
+        </div>
+      </main>
+
+      <!-- Vaste Voettekst met Resterende Tijd -->
+      <footer class="safe-bottom sticky bottom-0 z-30 bg-[#E8CCA3] border-t-2 border-[#C9A979] shadow-[0_-8px_20px_rgba(0,0,0,0.12)] px-5 pt-3 pb-3.5 text-center text-stone-900">
+        <p class="text-xs font-semibold text-[#54381C] tracking-wide">
+          Resterende speltijd: <span id="footer-countdown" class="font-mono text-stone-950 font-black">15 minuten en 00 seconden</span>
+        </p>
+        <p class="text-[10px] text-stone-700 mt-0.5">Vind de fysieke codes op locatie en los de opdrachten op!</p>
+      </footer>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- MODAL OVERLAY WRAPPER (POPUPS)                 -->
+    <!-- ============================================== -->
+    <div id="modal-overlay" class="hidden fixed inset-0 bg-stone-950/70 backdrop-blur-[3px] z-40 flex flex-col justify-center items-center p-4 transition-all duration-300">
+      
+      <!-- INHOUD VAN ACTIEVE MODAL WORDT HIER DYNAMISCH INGEVOEGD -->
+      <div id="modal-content" class="w-full max-w-[370px]"></div>
+
+    </div>
+
+    <!-- ============================================== -->
+    <!-- SCHERM 6: SOCIAL MEDIA APPS (DOOMSCROLL TRAP)  -->
+    <!-- ============================================== -->
+    <div id="screen-doomscroll-trap" class="hidden fixed inset-0 z-50 bg-[#000000] text-[#e2e2e8] flex flex-col min-h-screen overflow-hidden select-none">
+      
+      <!-- Universele Telefoon Top Bar met Tijd en Escape Knop -->
+      <div class="fixed top-0 left-0 right-0 z-50 pt-safe px-3 pb-2 flex items-center justify-between pointer-events-none">
+        <button id="trap-exit-btn" type="button" class="pointer-events-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-white shadow-xl border border-white/20 active:scale-95 transition-all">
+          <span class="material-symbols-outlined text-sm leading-none text-rose-400">close</span>
+          <span class="font-sans text-[11px] font-bold text-white">✕ Terug naar Speurtocht</span>
+        </button>
+
+        <div class="flex items-center gap-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[10px] font-mono pointer-events-auto border border-white/10">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="trap-phone-time">12:34</span>
+          <span class="text-stone-300">5G</span>
+          <span class="material-symbols-outlined text-[13px] text-stone-200">battery_full</span>
+        </div>
+      </div>
+
+      <!-- Dynamische App Container (Instagram, TikTok, BeReal, Snapchat, WhatsApp) -->
+      <div id="app-view-container" class="w-full h-full flex-1 flex flex-col overflow-hidden">
+        <!-- Dynamisch gerenderd door playerApp.js -->
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- SCHERM 7: GAME OVER OVERLAY (MOBIELE VIEW)      -->
+    <!-- ============================================== -->
+    <div id="screen-game-over" class="hidden fixed inset-0 z-50 bg-stone-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center select-none">
+      <div class="w-full max-w-[360px] bg-white rounded-3xl p-6 shadow-2xl border border-stone-200 flex flex-col items-center">
+        <div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center text-3xl mb-3 shadow-inner">
+          🏆
+        </div>
+        <h2 class="font-display text-2xl font-black text-stone-900">Speurtocht Afgelopen!</h2>
+        <p id="game-over-reason" class="text-xs text-stone-600 mt-1 mb-4">De 15 minuten zijn voorbij.</p>
+
+        <!-- Jouw Resultaat Card -->
+        <div class="w-full bg-stone-50 rounded-2xl p-4 border border-stone-200 mb-4 flex flex-col gap-2">
+          <div class="flex justify-between items-center text-xs text-stone-600">
+            <span>Jouw Eindscore:</span>
+            <span id="final-player-score" class="font-bold text-primary text-base">0 pt</span>
+          </div>
+          <div class="flex justify-between items-center text-xs text-stone-600">
+            <span>Geclaimde Items:</span>
+            <span id="final-player-items" class="font-bold text-stone-900">0 / 7</span>
+          </div>
+          <div class="flex justify-between items-center text-xs text-stone-600">
+            <span>Zelfbeheersing Beloningen:</span>
+            <span id="final-self-control" class="font-bold text-emerald-700">0x (-0s)</span>
+          </div>
+          <div class="flex justify-between items-center text-xs text-stone-600">
+            <span>Tijd in Doomscroll Val:</span>
+            <span id="final-doomscroll-time" class="font-bold text-rose-600">0 sec</span>
+          </div>
+        </div>
+
+        <button id="btn-restart-player" type="button" class="w-full py-3 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-sm shadow transition">
+          Terug naar de Lobby
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Socket.io Client Lib -->
+  <script src="/socket.io/socket.io.js"></script>
+
+  <!-- Applicatie Scripts met Cache Buster -->
+  <script src="/js/itemsData.js?v=12"></script>
+  <script src="/js/soundEffects.js?v=12"></script>
+  <script src="/js/notifications.js?v=12"></script>
+  <script src="/js/playerApp.js?v=12"></script>
+
+  <!-- PWA Service Worker registratie met forceer-update -->
+  <script>
+    if ('caches' in window) {
+      caches.keys().then(keys => {
+        keys.forEach(k => {
+          if (k !== 'doomscroll-escape-v12') caches.delete(k);
+        });
+      });
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js?v=12')
+          .then(reg => {
+            reg.update();
+            console.log('ServiceWorker geregistreerd met scope:', reg.scope);
+          })
+          .catch(err => console.warn('ServiceWorker registratie mislukt:', err));
+      });
+    }
+  </script>
+</body>
+</html>
+
