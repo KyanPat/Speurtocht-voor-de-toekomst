@@ -5,6 +5,7 @@ class NotificationManager {
     this.timer = null;
     this.isActive = false;
     this.onTemptationClick = null;
+    this.lastShownTime = 0;
   }
 
   init(onTemptationClick) {
@@ -64,6 +65,14 @@ class NotificationManager {
   }
 
   show(notif) {
+    if (!notif) return;
+    const now = Date.now();
+    if (this.lastShownTime && (now - this.lastShownTime) < 8000) {
+      // Voorkom dubbele stacking binnen 8 seconden
+      return;
+    }
+    this.lastShownTime = now;
+
     this.createContainer();
     if (window.sounds) window.sounds.playNotification();
 

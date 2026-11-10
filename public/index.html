@@ -294,25 +294,25 @@
     }
   </script>
 
-  <!-- Applicatie Scripts met Cache Buster (v19) -->
-  <script src="/js/itemsData.js?v=19"></script>
-  <script src="/js/soundEffects.js?v=19"></script>
-  <script src="/js/notifications.js?v=19"></script>
-  <script src="/js/playerApp.js?v=19"></script>
+  <!-- Applicatie Scripts met Cache Buster (v20) -->
+  <script src="/js/itemsData.js?v=20"></script>
+  <script src="/js/soundEffects.js?v=20"></script>
+  <script src="/js/notifications.js?v=20"></script>
+  <script src="/js/playerApp.js?v=20"></script>
 
   <!-- PWA Service Worker registratie met forceer-update -->
   <script>
     if ('caches' in window) {
       caches.keys().then(keys => {
         keys.forEach(k => {
-          if (k !== 'doomscroll-escape-v19') caches.delete(k);
+          if (k !== 'doomscroll-escape-v20') caches.delete(k);
         });
       });
     }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=19')
+        navigator.serviceWorker.register('/sw.js?v=20')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);

@@ -329,6 +329,7 @@
     }
 
     if (status === 'LOBBY') {
+      if (window.notifications) window.notifications.stopAmbientDistractions();
       if (!state.playerName) {
         showScreen('login');
       } else {
@@ -337,7 +338,9 @@
     } else if (status === 'PLAYING') {
       showScreen('gameplay');
       renderMapCards();
+      if (window.notifications) window.notifications.startAmbientDistractions();
     } else if (status === 'ENDED') {
+      if (window.notifications) window.notifications.stopAmbientDistractions();
       showScreen('gameOver');
     }
   }
@@ -986,7 +989,7 @@
             <span class="material-symbols-outlined text-lg">check_circle</span>
             <span>Verifieer Rotatie & Onthul Locatie</span>
           </button>
-          <button type="button" onclick="closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
+          <button type="button" onclick="window.closeModal ? window.closeModal() : window.playerApp.closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
             Annuleren
           </button>
         </div>
@@ -1064,7 +1067,7 @@
             <span class="material-symbols-outlined text-lg">verified</span>
             <span>Verifieer Code & Onthul Locatie</span>
           </button>
-          <button type="button" onclick="closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
+          <button type="button" onclick="window.closeModal ? window.closeModal() : window.playerApp.closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
             Annuleren
           </button>
         </div>
@@ -1134,7 +1137,7 @@
             <span class="material-symbols-outlined text-lg">done_all</span>
             <span>Puzzel Vastklikken & Locatie Onthullen</span>
           </button>
-          <button type="button" onclick="closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
+          <button type="button" onclick="window.closeModal ? window.closeModal() : window.playerApp.closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
             Annuleren
           </button>
         </div>
@@ -1207,7 +1210,7 @@
             <span class="material-symbols-outlined text-lg">check_circle</span>
             <span>Selectie Verifiëren</span>
           </button>
-          <button type="button" onclick="closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
+          <button type="button" onclick="window.closeModal ? window.closeModal() : window.playerApp.closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
             Annuleren
           </button>
         </div>
@@ -1280,12 +1283,19 @@
             <span class="material-symbols-outlined text-lg">pin</span>
             <span>Fysieke Code Invoeren</span>
           </button>
-          <button type="button" onclick="closeModal()" class="w-full py-2.5 rounded-2xl bg-stone-100 text-stone-700 font-semibold text-xs hover:bg-stone-200 transition cursor-pointer">
+          <button type="button" id="btn-captcha-back-to-map" onclick="window.closeModal ? window.closeModal() : window.playerApp.closeModal()" class="w-full py-2.5 rounded-2xl bg-stone-100 text-stone-700 font-semibold text-xs hover:bg-stone-200 transition cursor-pointer">
             Terug naar Kaart
           </button>
         </div>
       </div>
     `;
+
+    const btnBackToMap = document.getElementById('btn-captcha-back-to-map');
+    if (btnBackToMap) {
+      btnBackToMap.addEventListener('click', () => {
+        closeModal();
+      });
+    }
 
     document.getElementById('btn-enter-code-now').addEventListener('click', () => {
       openItemDetailModal(item);
@@ -1703,7 +1713,7 @@
       if (res && res.success) {
         state.cooldowns[itemId] = res.newCooldown;
         if (window.sounds) window.sounds.playReward();
-        showToast('Goed bezig! Je blijft gefocust op de speurtocht.', 'success');
+        showToast('Goed bezig! Je blijft gefocust op je doelen.', 'success');
         renderMapCards();
       }
     });
@@ -1826,139 +1836,74 @@
 
   const FEED_OPEN_VIDEOS = [
     {
-      url: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-      caption: 'Time-lapse van bloeiende voorjaarsbloemen in 4K 🌸✨ Puur natuurlijk wonder! #nature #timelapse #bloemen #lente',
-      user: 'botanical.shots',
-      avatar: 'https://i.pravatar.cc/150?img=33',
-      loc: 'Keukenhof, Lisse',
-      likes: 18400,
-      credits: 'Bron: Mozilla Developer Network (MDN) • Licentie: CC0 Public Domain'
-    },
-    {
-      url: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/friday.mp4',
-      caption: 'De golven tijdens een gouden zonsondergang op vrijdagavond... 🌅🌊 Zet je geluid even aan! #sunset #ocean #relax #chill',
+      url: '/assets/videos/friday_chill.mp4',
+      caption: 'De golven tijdens een gouden zonsondergang op vrijdagavond... 🌅🌊 Zet je geluid even lekker aan! #sunset #ocean #relax #chill',
       user: 'sunset_vibes_nl',
       avatar: 'https://i.pravatar.cc/150?img=11',
       loc: 'Scheveningen Strand',
       likes: 42100,
-      credits: 'Bron: Mozilla Open Web Media Archive • Licentie: CC0 Public Domain'
+      sound: 'Origineel Geluid - Friday Sunset Chill (Akkoorden & Golven)',
+      credits: 'Mozilla Open Web Media • Licentie: CC0 Public Domain'
     },
     {
-      url: 'https://vjs.zencdn.net/v/oceans.mp4',
-      caption: 'Duik mee in de diepblauwe oceaan tussen de dolfijnen en koraalriffen 🐬🌊 Onwerkelijk mooi! #oceanlife #marinelife #deepblue',
-      user: 'ocean.explorer',
+      url: '/assets/videos/bear_stream.mp4',
+      caption: 'Wat een natuurgeweld! Gigantische beer vangt verse vis in de woeste stroomversnelling 🐻🐟 #wildlife #nature #river #salmon',
+      user: 'nature_wildlife_nl',
+      avatar: 'https://i.pravatar.cc/150?img=33',
+      loc: 'Nationaal Park',
+      likes: 58400,
+      sound: 'Origineel Geluid - Ruisende Bergrivier & Beer Plons',
+      credits: 'W3C Open Media • Licentie: CC0 Public Domain'
+    },
+    {
+      url: '/assets/videos/echo_music.mp4',
+      caption: 'Onze nieuwe single "Here We Are" is uit! 🎸🔥 Wat vinden jullie van het refrein? #newmusic #indierock #vibes #live',
+      user: 'echo_band_official',
       avatar: 'https://i.pravatar.cc/150?img=47',
-      loc: 'Caribisch Nederland',
-      likes: 56900,
-      credits: 'Bron: VideoJS Oceans Open Project (Disney Nature / VideoJS) • Licentie: Open Media'
+      loc: 'TivoliVredenburg, Utrecht',
+      likes: 71200,
+      sound: 'Origineel Geluid - Echo: Here We Are (Vocal & Drums)',
+      credits: 'Echo Band / MediaElement • Licentie: CC-BY Open Track'
     },
     {
-      url: 'https://www.w3schools.com/html/mov_bbb.mp4',
+      url: '/assets/videos/sintel_trailer.mp4',
+      caption: 'Sintel: epische zoektocht van een dappere krijger door de besneeuwde bergen ⚔️🐉 Prachtige cinematische animatie! #sintel #openmovie #cgi',
+      user: 'open_cinema_hub',
+      avatar: 'https://i.pravatar.cc/150?img=53',
+      loc: 'Open Media Hub',
+      likes: 89400,
+      sound: 'Origineel Geluid - Jan Morgenstern (Sintel Score & Dragon Roar)',
+      credits: 'Blender Open Movie (Sintel) • Licentie: CC-BY 3.0'
+    },
+    {
+      url: '/assets/videos/bunny_cartoon.mp4',
       caption: 'De legendarische Big Buck Bunny ontwaakt in het bos! 🐰🌳 100% gemaakt met open source 3D software! #blender3d #animation #openmovie',
       user: 'blender_open_anim',
       avatar: 'https://i.pravatar.cc/150?img=20',
       loc: 'Amsterdam 3D Studio',
-      likes: 89300,
-      credits: 'Bron: Blender Foundation (Big Buck Bunny) • Licentie: Creative Commons Attribution 3.0 (CC-BY 3.0)'
+      likes: 94300,
+      sound: 'Origineel Geluid - Fluitende Vogels & Vrolijke Bunny Score',
+      credits: 'Blender Foundation (Big Buck Bunny) • Licentie: CC-BY 3.0'
     },
     {
-      url: 'https://media.w3.org/2010/05/sintel/trailer.mp4',
-      caption: 'Sintel: epische zoektocht van een dappere heldin door de besneeuwde bergen ⚔️🐉 Prachtige cinematische animatie! #sintel #openmovie #cgi',
-      user: 'open_cinema_nl',
-      avatar: 'https://i.pravatar.cc/150?img=53',
-      loc: 'Open Media Hub',
-      likes: 67400,
-      credits: 'Bron: W3C / Blender Open Movie (Sintel) • Licentie: Creative Commons Attribution 3.0 (CC-BY 3.0)'
-    },
-    {
-      url: 'https://media.w3.org/2010/05/bunny/trailer.mp4',
-      caption: 'De officiële teaser trailer van Big Buck Bunny in volle glorie! 🐰✨ Blijft een absolute klassieker. #animation #funny #nostalgia',
-      user: 'bunny_animation_nl',
-      avatar: 'https://i.pravatar.cc/150?img=65',
-      loc: 'Utrecht Animatie',
-      likes: 31200,
-      credits: 'Bron: W3C HTML5 Video Test Suite • Licentie: Creative Commons Attribution (CC-BY)'
-    },
-    {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      caption: 'Explosieve kleuren en vurige actie in 60fps! 🔥✨ Kijk hoe vloeiend dit loopt. #hype #visuals #action #satisfying',
-      user: 'blaze_visuals',
+      url: '/assets/videos/movie_300.mp4',
+      caption: 'Kijk naar die camerahoek en cinematische slow motion! 🎥💥 Prachtig staaltje actiewerk. #action #visuals #epic #slowmo',
+      user: 'action_visuals_nl',
       avatar: 'https://i.pravatar.cc/150?img=22',
-      loc: 'Rotterdam Studios',
-      likes: 104200,
-      credits: 'Bron: Google Open Media Sample (Blazes) • Licentie: CC-BY 3.0'
+      loc: 'Filmstudio Amsterdam',
+      likes: 63100,
+      sound: 'Origineel Geluid - Hollywood Action Drums & Effects',
+      credits: 'W3C HTML5 Video Test Suite • Licentie: CC-BY'
     },
     {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-      caption: 'Adem in, adem uit... Ultieme rust en natuurbeleving 🌿🏔️ Geluid aan voor de beste ervaring! #escape #zen #nature #soundon',
-      user: 'escape_reality_nl',
-      avatar: 'https://i.pravatar.cc/150?img=41',
-      loc: 'Alpen Natuurgebied',
-      likes: 142300,
-      credits: 'Bron: Google Open Media Sample (Escapes) • Licentie: CC0 Public Domain'
-    },
-    {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-      caption: 'Dit is puur genieten! 🎢🎉 Tag iemand die dit ook moet proberen! #fun #energy #viral #weekend',
-      user: 'extreme_fun_nl',
-      avatar: 'https://i.pravatar.cc/150?img=17',
-      loc: 'Pretpark Nederland',
-      likes: 98400,
-      credits: 'Bron: Google Media Open Bucket • Licentie: CC-BY 2.0'
-    },
-    {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
-      caption: 'Kleurrijk vuurwerk en spectaculaire lichteffecten in de nacht 🎆✨ Pure magie! #fireworks #lights #party #festival',
-      user: 'night_vibes_live',
-      avatar: 'https://i.pravatar.cc/150?img=36',
-      loc: 'Festivalterrein Breda',
-      likes: 175600,
-      credits: 'Bron: Google Open Media Sample • Licentie: CC-BY 4.0'
-    },
-    {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-      caption: 'Wanneer je hersenen smelten van verbazing 🤯🧊 Wat gebeurt hier nou precies?! #mindblown #physics #satisfying #weird',
-      user: 'science_tricks_nl',
-      avatar: 'https://i.pravatar.cc/150?img=28',
-      loc: 'Science Lab Delft',
-      likes: 210500,
-      credits: 'Bron: Google Open Media Sample • Licentie: CC0 Public Domain'
-    },
-    {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-      caption: 'Sci-fi actie van wereldklasse opgenomen in het hart van Amsterdam! 🤖💥 100% Open Source film! #tearsOfSteel #blender #vfx',
-      user: 'scifi_amsterdam',
-      avatar: 'https://i.pravatar.cc/150?img=59',
-      loc: 'Amsterdam Zuidas',
-      likes: 312000,
-      credits: 'Bron: Blender Foundation Open Movie Project • Licentie: CC-BY 3.0'
-    },
-    {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
-      caption: 'Vol gas over de snelweg! 🏎️💨 Luister naar dat rauwe motorgeluid met je koptelefoon op! #supercars #bullrun #soundon #adrenaline',
-      user: 'speed_demons_nl',
-      avatar: 'https://i.pravatar.cc/150?img=68',
-      loc: 'Circuit Zandvoort',
-      likes: 189400,
-      credits: 'Bron: Google Open Media Sample (Bullrun) • Licentie: CC-BY 3.0'
-    },
-    {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4',
-      caption: 'Wat voor budgetauto koop je anno nu voor een prikkie?! 🚗💸 Je gelooft je ogen niet! #autotips #budget #challenge #funny',
-      user: 'auto_experts_nl',
-      avatar: 'https://i.pravatar.cc/150?img=14',
-      loc: 'Automarkt Utrecht',
-      likes: 122800,
-      credits: 'Bron: Google Open Media Sample • Licentie: CC-BY 3.0'
-    },
-    {
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-      caption: 'Een bizarre reis door een reusachtige mechanische droomwereld 🐘⚙️ Eerste open movie ter wereld! #retro3d #classic #animation',
-      user: 'retro_animatie_nl',
-      avatar: 'https://i.pravatar.cc/150?img=49',
-      loc: 'Digitale Kunstacademie',
-      likes: 84300,
-      credits: 'Bron: Blender Foundation (Elephants Dream) • Licentie: CC-BY 2.5'
+      url: '/assets/videos/oceans.mp4',
+      caption: 'Duik mee in de diepblauwe oceaan tussen de dolfijnen en koraalriffen 🐬🌊 Onwerkelijk rustgevend! #oceanlife #marinelife #deepblue',
+      user: 'deep_ocean_explorer',
+      avatar: 'https://i.pravatar.cc/150?img=65',
+      loc: 'Caribisch Nederland',
+      likes: 112000,
+      sound: 'Origineel Geluid - Ocean Symphony & Onderwater Ambience',
+      credits: 'VideoJS Oceans Open Project • Licentie: Open Media'
     }
   ];
 
@@ -2003,6 +1948,14 @@
 
   function goBack() {
     if (window.sounds) window.sounds.playClick();
+    document.querySelectorAll('video').forEach(v => {
+      v.pause();
+      try { v.currentTime = 0; } catch(e) {}
+    });
+    if (tiktokObserver) {
+      tiktokObserver.disconnect();
+      tiktokObserver = null;
+    }
     if (viewHistory.length > 0) {
       const prev = viewHistory.pop();
       isPoppingTrapHistory = true;
@@ -3238,6 +3191,46 @@
 
   // 2. TIKTOK REELS INTERFACE (MET WERKEND VOLGEND / VOOR JOU TABBLAD & 100% OPEN SOURCE VIDEO'S)
   let currentTikTokTab = 'foryou';
+  let tiktokObserver = null;
+
+  function initTikTokObserver(feedEl) {
+    if (tiktokObserver) {
+      tiktokObserver.disconnect();
+    }
+    tiktokObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const vid = entry.target.querySelector('.tiktok-video-el');
+        if (!vid) return;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          // Pauseer alle andere video's in de feed
+          feedEl.querySelectorAll('.tiktok-video-el').forEach(other => {
+            if (other !== vid) {
+              other.pause();
+              try { other.currentTime = 0; } catch(e) {}
+            }
+          });
+
+          // Actieve video start altijd vanaf begin (0s) samen met audio
+          try { vid.currentTime = 0; } catch(e) {}
+          vid.muted = state.reelsMuted;
+          vid.volume = 0.25;
+          const p = vid.play();
+          if (p !== undefined) {
+            p.catch(() => {
+              vid.muted = true;
+              vid.play().catch(() => {});
+            });
+          }
+        } else {
+          vid.pause();
+          try { vid.currentTime = 0; } catch(e) {}
+        }
+      });
+    }, {
+      root: feedEl,
+      threshold: [0.1, 0.5, 0.8]
+    });
+  }
 
   function renderTikTokApp(container, activeTab = 'foryou') {
     currentTikTokTab = activeTab;
@@ -3288,6 +3281,7 @@
     `;
 
     const feed = container.querySelector('#tiktok-feed-scroll');
+    initTikTokObserver(feed);
     appendTikTokReels(feed, 4, isFollowingTab);
 
     feed.addEventListener('scroll', () => {
@@ -3435,18 +3429,9 @@
 
       feedEl.appendChild(reelEl);
 
-      // Start video playback met geluid
-      const vid = reelEl.querySelector('.tiktok-video-el');
-      if (vid) {
-        vid.muted = state.reelsMuted;
-        vid.volume = 0.25;
-        const p = vid.play();
-        if (p !== undefined) {
-          p.catch(() => {
-            // Autoplay vereist interactie op mobiel -> val terug op muted
-            vid.muted = true;
-          });
-        }
+      // Koppel aan intersection observer (start pas als reel daadwerkelijk in beeld schuift!)
+      if (tiktokObserver) {
+        tiktokObserver.observe(reelEl);
       }
     }
   }
@@ -3830,6 +3815,14 @@
   }
 
   function exitTrap() {
+    document.querySelectorAll('video').forEach(v => {
+      v.pause();
+      try { v.currentTime = 0; } catch(e) {}
+    });
+    if (tiktokObserver) {
+      tiktokObserver.disconnect();
+      tiktokObserver = null;
+    }
     const secondsSpent = Math.round((Date.now() - (state.trapStartTime || Date.now())) / 1000);
     state.inDoomscroll = false;
     viewHistory = [];
@@ -4068,6 +4061,7 @@
     modalOverlay.classList.add('hidden');
     state.activeModal = null;
   }
+  window.closeModal = closeModal;
 
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
@@ -4138,6 +4132,8 @@
     openFollowingListModal,
     leaveLobby,
     exitTrap,
+    closeModal,
+    openModal,
     getFeedVideo: (idx) => FEED_OPEN_VIDEOS[idx % FEED_OPEN_VIDEOS.length],
     toggleTikTokLike,
     toggleTikTokDislike,

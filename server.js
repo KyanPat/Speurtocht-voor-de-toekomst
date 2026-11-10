@@ -230,6 +230,8 @@ let gameState = {
 };
 
 let gameTimerInterval = null;
+let serverDistractionCounter = 0;
+let nextServerDistractionSeconds = 20;
 
 function formatSeconds(secs) {
   const m = Math.floor(Math.max(0, secs) / 60);
@@ -320,14 +322,34 @@ function startGame() {
 
   gameState.status = 'PLAYING';
   gameState.timeRemaining = GAME_DURATION_SECONDS;
+  serverDistractionCounter = 0;
+  nextServerDistractionSeconds = 20;
   
-  addActivityLog('Speurtocht gestart! De klok tikt: 15 minuten.', 'start');
+  addActivityLog('Spel gestart! De klok tikt: 15 minuten.', 'start');
 
   if (gameTimerInterval) clearInterval(gameTimerInterval);
 
   gameTimerInterval = setInterval(() => {
     if (gameState.status === 'PLAYING') {
       gameState.timeRemaining--;
+
+      // Automatische afleidingsnotificaties om de 20-30 seconden tijdens het spel
+      serverDistractionCounter++;
+      if (serverDistractionCounter >= nextServerDistractionSeconds) {
+        serverDistractionCounter = 0;
+        nextServerDistractionSeconds = Math.floor(Math.random() * 11) + 20; // 20 tot 30 seconden
+        
+        const distractionList = [
+          { app: 'TikTok', title: 'TikTok', message: 'Kijk deze virale video: "Bizarre ontdekking op camera vastgelegd..." 😱', platform: 'tiktok' },
+          { app: 'Instagram', title: 'Instagram', message: '@lisa.kramer heeft je recente foto geliket ❤️', platform: 'instagram' },
+          { app: 'Snapchat', title: 'Snapchat', message: '🔥 Je streak met Daan staat op 56 dagen! Stuur snel een snap terug!', platform: 'snapchat' },
+          { app: 'BeReal', title: 'BeReal.', message: '⚠️ Tijd voor BeReal! Je hebt nog 2 minuten om je foto te posten.', platform: 'bereal' },
+          { app: 'WhatsApp', title: 'WhatsApp • Moeder', message: 'Heb je deze leuke video al gezien? 😂 Wat eten we vanavond?', platform: 'whatsapp' },
+          { app: 'WhatsApp', title: 'WhatsApp • Vriendengroep', message: 'Daan: Wie heeft er straks zin om een potje te gamen? 🎮', platform: 'whatsapp' }
+        ];
+        const pick = distractionList[Math.floor(Math.random() * distractionList.length)];
+        io.emit('notification:push', pick);
+      }
 
       // Check of Job Raise ontgrendeld moet worden (1 minuut na claim van Job Interview)
       if (gameState.jobRaiseUnlockTimerActive && gameState.jobRaiseUnlockSecondsLeft > 0) {
@@ -627,8 +649,8 @@ io.on('connection', (socket) => {
 
   socket.on('admin:trigger_distraction', (customMsg) => {
     const defaultMessages = [
-      'WhatsApp: 👩 Moeder: "Vergeet je fietssleutels niet! En hoe gaat de speurtocht?"',
-      'TikTok: 🔥 Kijk deze viral video over schoolgeheimen!',
+      'WhatsApp: 👩 Moeder: "Heb je deze leuke video al gezien? 😂 Wat eten we vanavond?"',
+      'TikTok: 🔥 Kijk deze virale video over een bizarre ontdekking!',
       'Instagram: @lars.v heeft je zojuist getagd in een bericht!',
       'BeReal: ⚠️ Tijd voor BeReal! Je hebt 2 minuten.',
       'Snapchat: Je streak met Sophie verloopt over 1 uur!'
