@@ -290,30 +290,40 @@ function broadcastFullState() {
 function checkGameOverCondition() {
   if (gameState.status !== 'PLAYING') return;
 
-  // Voorwaarde 1: Timer verlopen
+  // Voorwaarde 1: Timer van 15 minuten is afgelopen
   if (gameState.timeRemaining <= 0) {
     endGame('TIJD_VERLOPEN');
     return;
   }
 
-  // Voorwaarde 2: Alle items zijn verzameld
-  const allLimitedClaimed = Object.values(gameState.limitedItems).every(item => item.claimedBy !== null);
+  // Voorwaarde 2: Alle behaalde limited en standaard items zijn verkregen
   const playerValues = Object.values(gameState.players);
-  const totalItemsCount = Object.keys(gameState.generalItems).length + Object.keys(gameState.limitedItems).length;
-  
-  if (playerValues.length > 0) {
-    // A: Een topspeler heeft alle items behaald
-    const anyPlayerHasAll = playerValues.some(p => (p.claimedItems || []).length >= totalItemsCount);
+  if (playerValues.length === 0) return;
 
-    // B: Alle limited items zijn op EN alle actieve spelers hebben alle algemene items
-    const allGeneralClaimedByAll = allLimitedClaimed && playerValues.every(p => {
-      const generalKeys = Object.keys(gameState.generalItems);
-      return generalKeys.every(k => (p.claimedItems || []).includes(k));
-    });
+  const generalKeys = Object.keys(gameState.generalItems);
+  const limitedKeys = Object.keys(gameState.limitedItems);
 
-    if (anyPlayerHasAll || allGeneralClaimedByAll) {
-      endGame('ALLE_ITEMS_VERZAMELD');
-    }
+  // Zijn alle limited items geclaimd?
+  const allLimitedClaimed = limitedKeys.every(k => gameState.limitedItems[k] && gameState.limitedItems[k].claimedBy !== null);
+
+  // Heeft een speler alle 4 standaard items verkregen?
+  const anyPlayerHasAllGeneral = playerValues.some(p => 
+    generalKeys.every(k => (p.claimedItems || []).includes(k))
+  );
+
+  // Hebben alle actieve verbonden spelers alle standaard items behaald?
+  const activePlayers = playerValues.filter(p => p.connected);
+  const allActiveHaveAllGeneral = activePlayers.length > 0 && activePlayers.every(p => 
+    generalKeys.every(k => (p.claimedItems || []).includes(k))
+  );
+
+  // Heeft een speler alle items behaald?
+  const totalItemCount = generalKeys.length + limitedKeys.length;
+  const anyPlayerHasAll = playerValues.some(p => (p.claimedItems || []).length >= totalItemCount);
+
+  // Beëindig de game zodra 15 minuten voorbij zijn OF alle limited en standaard items zijn behaald!
+  if (anyPlayerHasAll || (allLimitedClaimed && anyPlayerHasAllGeneral) || (allLimitedClaimed && allActiveHaveAllGeneral)) {
+    endGame('ALLE_ITEMS_VERZAMELD');
   }
 }
 
@@ -326,6 +336,7 @@ function startGame() {
   nextServerDistractionSeconds = 20;
   
   addActivityLog('Spel gestart! De klok tikt: 15 minuten.', 'start');
+  io.emit('game:started', { timeRemaining: gameState.timeRemaining });
 
   if (gameTimerInterval) clearInterval(gameTimerInterval);
 
@@ -395,9 +406,7 @@ function startGame() {
         trouwenUnlockSecondsLeft: gameState.trouwenUnlockSecondsLeft
       });
 
-      if (gameState.timeRemaining <= 0) {
-        endGame('TIJD_VERLOPEN');
-      }
+      checkGameOverCondition();
     }
   }, 1000);
 

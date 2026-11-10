@@ -113,37 +113,135 @@ class SoundManager {
     });
   }
 
-  // 4. Heldere smartphone glasbel notificatietoon (modern kristalhelder belletje)
-  playNotification() {
+  // Helper om een echt audiobestand af te spelen met Web Audio fallback
+  playAudioFile(filename, fallbackFn) {
     if (this.muted) return;
-    this.init();
-    if (!this.ctx) return;
+    try {
+      const audio = new Audio('/assets/sounds/' + filename);
+      audio.volume = 0.5;
+      const p = audio.play();
+      if (p !== undefined) {
+        p.catch(() => {
+          if (fallbackFn) fallbackFn.call(this);
+        });
+      }
+    } catch(e) {
+      if (fallbackFn) fallbackFn.call(this);
+    }
+  }
 
-    const t = this.ctx.currentTime;
-    // F6 en Bb6 dubbeltonig glasklokje
-    const tones = [
-      { freq: 1396.91, delay: 0, dur: 0.25, vol: 0.16 },
-      { freq: 1864.66, delay: 0.08, dur: 0.35, vol: 0.14 }
-    ];
+  // 4a. Authentiek WhatsApp notificatiegeluid (karakteristieke twee-toon bel)
+  playWhatsAppNotification() {
+    this.playAudioFile('whatsapp.wav', () => {
+      this.init();
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      [
+        { freq: 1396.91, delay: 0, dur: 0.22, vol: 0.25 },
+        { freq: 1760.00, delay: 0.07, dur: 0.35, vol: 0.3 }
+      ].forEach(tone => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(tone.freq, t + tone.delay);
+        gain.gain.setValueAtTime(0.001, t + tone.delay);
+        gain.gain.linearRampToValueAtTime(tone.vol, t + tone.delay + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + tone.delay + tone.dur);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t + tone.delay);
+        osc.stop(t + tone.delay + tone.dur);
+      });
+    });
+  }
 
-    tones.forEach(tone => {
+  // 4b. Authentiek Snapchat notificatiegeluid (snappy omhooggaande 'bloop-pop')
+  playSnapchatNotification() {
+    this.playAudioFile('snapchat.wav', () => {
+      this.init();
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      const startTime = t + tone.delay;
-
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(tone.freq, startTime);
-
-      gain.gain.setValueAtTime(0.001, startTime);
-      gain.gain.linearRampToValueAtTime(tone.vol, startTime + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + tone.dur);
-
+      osc.frequency.setValueAtTime(440, t);
+      osc.frequency.exponentialRampToValueAtTime(1250, t + 0.08);
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
       osc.connect(gain);
       gain.connect(this.ctx.destination);
-
-      osc.start(startTime);
-      osc.stop(startTime + tone.dur);
+      osc.start(t);
+      osc.stop(t + 0.19);
     });
+  }
+
+  // 4c. Authentiek Instagram / iOS DM geluid (zachte, heldere kristaltinteling)
+  playInstagramNotification() {
+    this.playAudioFile('instagram.wav', () => {
+      this.init();
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      [1318.51, 1975.53].forEach((f, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, t);
+        gain.gain.setValueAtTime(0.2 / (idx + 1), t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.3);
+      });
+    });
+  }
+
+  // 4d. Authentiek BeReal notificatiegeluid (dubbele alarmerende beep)
+  playBeRealNotification() {
+    this.playAudioFile('bereal.wav', () => {
+      this.init();
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      [
+        { freq: 880, delay: 0, dur: 0.09, vol: 0.25 },
+        { freq: 1174.66, delay: 0.12, dur: 0.15, vol: 0.3 }
+      ].forEach(b => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(b.freq, t + b.delay);
+        gain.gain.setValueAtTime(b.vol, t + b.delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + b.delay + b.dur);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t + b.delay);
+        osc.stop(t + b.delay + b.dur);
+      });
+    });
+  }
+
+  // 4e. Authentiek TikTok notificatiegeluid
+  playTikTokNotification() {
+    this.playAudioFile('tiktok.wav', () => {
+      this.playInstagramNotification();
+    });
+  }
+
+  // 4. Centrale dispatcher voor platform-specifieke notificatiegeluiden
+  playNotification(platform = 'instagram') {
+    if (this.muted) return;
+    const p = (platform || '').toString().toLowerCase();
+    if (p.includes('whatsapp') || p.includes('moeder') || p.includes('vrienden')) {
+      this.playWhatsAppNotification();
+    } else if (p.includes('snapchat')) {
+      this.playSnapchatNotification();
+    } else if (p.includes('bereal')) {
+      this.playBeRealNotification();
+    } else if (p.includes('tiktok')) {
+      this.playTikTokNotification();
+    } else {
+      this.playInstagramNotification();
+    }
   }
 
   // 5. Triumfante, sprankelende synth chime voor het behalen van een Limited Item

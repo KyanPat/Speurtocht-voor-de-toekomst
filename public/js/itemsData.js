@@ -501,7 +501,7 @@ const PUSH_NOTIFICATIONS = [
     icon: 'send',
     color: '#E1306C',
     title: 'Instagram DM • Sarah',
-    message: 'Ben jij nu ook in de kantine?? Ik zag je net lopen!',
+    message: 'Hey! Heb je even tijd? Moet je echt even een leuke video laten zien 😂',
     time: 'Nu'
   }
 ];

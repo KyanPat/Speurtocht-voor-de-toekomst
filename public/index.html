@@ -141,11 +141,6 @@
           </button>
         </div>
 
-        <div class="w-full bg-amber-50 rounded-xl p-3 border border-amber-200/80 text-[11px] text-amber-900 leading-snug flex items-start gap-2 text-left">
-          <span class="material-symbols-outlined text-amber-600 text-lg shrink-0 mt-0.5">lightbulb</span>
-          <span><b>Speltip:</b> Pas op voor video-hints! Ze pauzeren je straftijd niet en kosten kostbare minuten.</span>
-        </div>
-
         <!-- Handige link naar Vindplekken (Geen digibord/qr link voor spelers) -->
         <div class="mt-4 pt-3 border-t border-stone-200/80 w-full flex items-center justify-center text-[11px] text-stone-500">
           <button id="btn-mobile-view-locations" type="button" class="hover:text-stone-800 underline flex items-center gap-1 font-semibold cursor-pointer">
@@ -294,25 +289,25 @@
     }
   </script>
 
-  <!-- Applicatie Scripts met Cache Buster (v20) -->
-  <script src="/js/itemsData.js?v=20"></script>
-  <script src="/js/soundEffects.js?v=20"></script>
-  <script src="/js/notifications.js?v=20"></script>
-  <script src="/js/playerApp.js?v=20"></script>
+  <!-- Applicatie Scripts met Cache Buster (v22) -->
+  <script src="/js/itemsData.js?v=22"></script>
+  <script src="/js/soundEffects.js?v=22"></script>
+  <script src="/js/notifications.js?v=22"></script>
+  <script src="/js/playerApp.js?v=22"></script>
 
   <!-- PWA Service Worker registratie met forceer-update -->
   <script>
     if ('caches' in window) {
       caches.keys().then(keys => {
         keys.forEach(k => {
-          if (k !== 'doomscroll-escape-v20') caches.delete(k);
+          if (k !== 'doomscroll-escape-v22') caches.delete(k);
         });
       });
     }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=20')
+        navigator.serviceWorker.register('/sw.js?v=22')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);

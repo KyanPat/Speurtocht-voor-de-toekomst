@@ -1956,6 +1956,10 @@
       tiktokObserver.disconnect();
       tiktokObserver = null;
     }
+    if (instagramReelObserver) {
+      instagramReelObserver.disconnect();
+      instagramReelObserver = null;
+    }
     if (viewHistory.length > 0) {
       const prev = viewHistory.pop();
       isPoppingTrapHistory = true;
@@ -2624,17 +2628,17 @@
             <span class="text-[9px] text-stone-500 block text-right mt-1">12:30</span>
           </div>
 
-          <!-- KLIKBARE REEL VAN OMA MET TERUGKEER NAAR DEZE CHAT -->
-          <div class="max-w-[85%] rounded-2xl rounded-tl-none bg-stone-900 border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-emerald-400 transition transform active:scale-95 group" onclick="window.playerApp.openReelFromChat(2, 'moeder', 'moeder')">
+          <!-- KLIKBARE REEL MET TERUGKEER NAAR DEZE CHAT -->
+          <div class="max-w-[85%] rounded-2xl rounded-tl-none bg-stone-900 border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-emerald-400 transition transform active:scale-95 group" onclick="window.playerApp.openReelFromChat(4, 'moeder', 'moeder')">
             <div class="relative w-full h-44 bg-black overflow-hidden">
-              <video src="${FEED_OPEN_VIDEOS[2].url}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" autoplay loop muted playsinline></video>
+              <video src="${FEED_OPEN_VIDEOS[4].url}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" autoplay loop muted playsinline></video>
               <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
                 <div class="w-12 h-12 rounded-full bg-black/75 border border-white/50 flex items-center justify-center text-white shadow-xl group-hover:scale-110 transition">
                   <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
                 </div>
               </div>
               <span class="absolute top-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded text-[9px] font-bold text-white flex items-center gap-1">
-                🎬 Grappige video van oma • 0:15
+                🎬 Grappige animatie • 0:15
               </span>
               <span class="absolute bottom-2 right-2 bg-emerald-600/90 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow">
                 <span>Tik om video te bekijken</span>
@@ -2642,7 +2646,7 @@
               </span>
             </div>
             <div class="p-2.5 text-xs text-stone-200">
-              <p class="font-medium">Kijk deze video die oma net stuurde! 😂</p>
+              <p class="font-medium">Kijk dit konijntje haha! 😂</p>
               <span class="text-[9px] text-stone-500 block text-right mt-1">12:32</span>
             </div>
           </div>
@@ -2700,21 +2704,21 @@
           </div>
 
           <!-- GEDEELDE REEL KAART (KLIKBAAR MET TERUGMOGELIJKHEID NAAR DEZE CHAT!) -->
-          <div class="max-w-[85%] rounded-2xl bg-stone-900/90 border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-white transition transform active:scale-95 group" onclick="window.playerApp.openReelFromChat(3, 'sarah', 'sarah')">
+          <div class="max-w-[85%] rounded-2xl bg-stone-900/90 border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-white transition transform active:scale-95 group" onclick="window.playerApp.openReelFromChat(1, 'sarah', 'sarah')">
             <div class="relative w-full aspect-video bg-black overflow-hidden">
-              <img src="https://images.unsplash.com/photo-1535268647677-300dbf3d78d1?auto=format&fit=crop&w=600&q=80" class="w-full h-full object-cover group-hover:scale-105 transition" alt="Reel poster">
+              <video src="${FEED_OPEN_VIDEOS[1].url}" class="w-full h-full object-cover group-hover:scale-105 transition" autoplay loop muted playsinline></video>
               <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
                 <div class="w-12 h-12 rounded-full bg-black/70 border border-white/40 flex items-center justify-center text-white shadow-lg">
                   <span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
                 </div>
               </div>
               <span class="absolute top-2 left-2 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded text-[9px] font-bold text-white flex items-center gap-1">
-                🎬 Reel • 0:15
+                🎬 Beer in rivier • 0:15
               </span>
             </div>
             <div class="p-3 text-left space-y-1">
-              <div class="text-xs font-bold text-white leading-tight">Blender Open Animation • Funny Bunny 🐰</div>
-              <div class="text-[10px] text-stone-400">@blender_open_anim • 89.3K vind-ik-leuks</div>
+              <div class="text-xs font-bold text-white leading-tight">Natuur & Wildlife • Gigantische beer 🐻🐟</div>
+              <div class="text-[10px] text-stone-400">@nature_wildlife_nl • 58.4K vind-ik-leuks</div>
               <div class="text-[10px] text-blue-400 font-bold pt-1 flex items-center gap-1">
                 <span>Tik om video te bekijken</span>
                 <span class="material-symbols-outlined text-[13px]">arrow_forward</span>
@@ -2740,185 +2744,170 @@
     `;
   }
 
-  // REELS WEERGAVE MET TERUGKNOP & VOLLEDIGE VIDEO MET ZACHTER GELUID (0.25)
-  function renderInstagramReel(container, reelData, returnView = 'dm') {
-    closeInstagramComments();
-    const reel = reelData || FEED_OPEN_VIDEOS[3];
-    const reelId = 'reel_' + (reel.user || 'video');
+  // REELS WEERGAVE MET VOLLEDIG VERTICALE SCROLL/SWIPE FEED (100% ZOALS INSTAGRAM & TIKTOK)
+  let instagramReelObserver = null;
 
-    if (!igUserLikes[reelId]) igUserLikes[reelId] = { count: reel.likes || 45200, liked: false };
-    if (!igUserDislikes[reelId]) igUserDislikes[reelId] = { count: 320, disliked: false };
+  function renderInstagramReel(container, initialReelData = null, returnView = 'dm') {
+    closeInstagramComments();
+
+    if (instagramReelObserver) {
+      instagramReelObserver.disconnect();
+      instagramReelObserver = null;
+    }
+
+    // Index bepalen van het startende item
+    let initialIndex = 0;
+    if (initialReelData && initialReelData.url) {
+      const foundIdx = FEED_OPEN_VIDEOS.findIndex(v => v.url === initialReelData.url);
+      if (foundIdx !== -1) initialIndex = foundIdx;
+    } else if (typeof initialReelData === 'number') {
+      initialIndex = initialReelData % FEED_OPEN_VIDEOS.length;
+    }
 
     container.innerHTML = `
-      <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto relative select-none overflow-hidden">
+      <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto relative select-none">
         
-        <!-- Video Achtergrond Loop -->
-        <div class="absolute inset-0 z-0 bg-black">
-          <video id="active-reel-video" src="${reel.url}" class="w-full h-full object-cover" autoplay loop playsinline></video>
-          <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90 pointer-events-none"></div>
-        </div>
-
-        <!-- Header Bovenin met Duidelijke TERUGKNOP & VOLGENDE KNOP! -->
-        <div class="relative z-20 pt-12 px-3 pb-2 flex items-center justify-between gap-2">
+        <!-- Header Bovenin met Duidelijke TERUGKNOP, Titel & Geluidsknop -->
+        <div class="absolute top-0 left-0 right-0 z-30 pt-12 px-4 pb-2 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
           <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center border border-white/20 hover:bg-black/80 active:scale-95 transition cursor-pointer" title="Terug">
             <span class="material-symbols-outlined text-xl">arrow_back</span>
           </button>
           
-          <button type="button" id="reel-next-btn" onclick="window.playerApp.nextInstagramReel(document.getElementById('app-view-container'), '${returnView}')" class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-bold border border-white/20 hover:bg-black/80 active:scale-95 transition cursor-pointer" title="Volgende reel bekijken">
-            <span>Volgende</span>
-            <span class="material-symbols-outlined text-sm">skip_next</span>
-          </button>
+          <span class="text-sm font-bold text-white drop-shadow tracking-wide">Reels</span>
 
-          <button type="button" id="reel-mute-btn" class="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/20 cursor-pointer active:scale-95 transition" title="Geluid aan/uitzetten">
-            <span class="material-symbols-outlined text-[18px]" id="reel-mute-icon">volume_up</span>
+          <button type="button" id="reel-mute-btn" onclick="window.playerApp.toggleTikTokAudio(this)" class="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/20 cursor-pointer active:scale-95 transition" title="Geluid aan/uitzetten">
+            <span class="material-symbols-outlined text-[18px]" id="reel-mute-icon">${state.reelsMuted ? 'volume_off' : 'volume_up'}</span>
           </button>
         </div>
 
-        <div class="flex-1"></div>
+        <!-- Verticale Scroll Feed (Oneindig door te scrollen / swipen tussen ALLE video's) -->
+        <div id="instagram-reels-feed" class="flex-1 overflow-y-scroll snap-y snap-mandatory select-none">
+          ${FEED_OPEN_VIDEOS.map((reel, idx) => {
+            const reelId = 'ig_reel_' + idx;
+            if (!igUserLikes[reelId]) igUserLikes[reelId] = { count: reel.likes || 45200, liked: false };
+            if (!igUserDislikes[reelId]) igUserDislikes[reelId] = { count: 320, disliked: false };
+            return `
+              <div class="snap-feed-item relative w-full h-full shrink-0 flex flex-col justify-between overflow-hidden bg-black select-none" data-reel-idx="${idx}" id="ig-reel-item-${idx}">
+                <!-- Video Achtergrond -->
+                <div class="absolute inset-0 bg-black">
+                  <video src="${reel.url}" class="ig-reel-video-el w-full h-full object-cover" loop playsinline></video>
+                  <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/80 pointer-events-none"></div>
+                </div>
 
-        <!-- Video Info & Actieknoppen Onderin -->
-        <div class="relative z-20 pb-16 px-4 flex items-end justify-between">
-          <div class="max-w-[75%] space-y-2 text-left">
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-sm text-white drop-shadow">${reel.user || '@blender_open_anim'}</span>
-              <button type="button" id="reel-follow-btn" class="border border-white/70 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white hover:bg-white hover:text-black transition cursor-pointer" onclick="window.playerApp.toggleFollowUser(this, '${reel.user || '@blender_open_anim'}')">
-                ${isUserFollowed(reel.user || '@blender_open_anim') ? '✓ Volgend' : 'Volgen'}
-              </button>
-            </div>
-            <p class="text-xs text-white drop-shadow-md leading-snug">${reel.caption}</p>
-            
-            <div class="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] text-stone-200">
-              <span class="material-symbols-outlined text-[13px] text-emerald-400">music_note</span>
-              <span class="truncate">Origineel geluid - Open Source Audio</span>
-            </div>
+                <div class="h-20"></div>
 
-            <!-- Bronvermelding Pill -->
-            <div class="pt-0.5">
-              <span class="text-[9px] text-stone-300 bg-black/75 backdrop-blur-md border border-white/20 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
-                ℹ️ ${reel.credits}
-              </span>
-            </div>
-          </div>
+                <!-- Video Info & Knoppen Onderin -->
+                <div class="relative z-20 pb-16 px-4 flex items-end justify-between">
+                  <div class="max-w-[75%] space-y-2 text-left">
+                    <div class="flex items-center gap-2">
+                      <img src="${reel.avatar || getRandomAvatarUrl()}" class="w-8 h-8 rounded-full object-cover border border-white/30" alt="${reel.user}">
+                      <span class="font-bold text-sm text-white drop-shadow">${reel.user}</span>
+                      <button type="button" class="border border-white/70 px-2.5 py-0.5 rounded-full text-[10px] font-bold text-white hover:bg-white hover:text-black transition cursor-pointer" onclick="window.playerApp.toggleFollowUser(this, '${reel.user}')">
+                        ${isUserFollowed(reel.user) ? '✓ Volgend' : 'Volgen'}
+                      </button>
+                    </div>
+                    <p class="text-xs text-white drop-shadow-md leading-snug">${reel.caption}</p>
+                    
+                    <div class="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full bg-black/60 backdrop-blur-md text-[10px] text-stone-200">
+                      <span class="material-symbols-outlined text-[13px] text-emerald-400">music_note</span>
+                      <span class="truncate">${reel.sound}</span>
+                    </div>
 
-          <!-- Actieknoppen Rechts: Like, Dislike, Comment, Deel -->
-          <div class="flex flex-col items-center gap-3">
-            <!-- LIKE -->
-            <button type="button" id="btn-reel-like" class="flex flex-col items-center active:scale-125 transition text-white">
-              <div class="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center shadow">
-                <span class="material-symbols-outlined text-2xl ${igUserLikes[reelId].liked ? 'text-rose-500' : 'text-white'}" id="reel-like-icon" style="${igUserLikes[reelId].liked ? "font-variation-settings: 'FILL' 1;" : "font-variation-settings: 'FILL' 0;"}">${igUserLikes[reelId].liked ? 'favorite' : 'favorite_border'}</span>
+                    <div class="pt-0.5">
+                      <span class="text-[9px] text-stone-300 bg-black/75 backdrop-blur-md border border-white/20 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                        ℹ️ ${reel.credits}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Actieknoppen Rechts: Like, Dislike, Comment, Deel -->
+                  <div class="flex flex-col items-center gap-3">
+                    <button type="button" class="flex flex-col items-center active:scale-125 transition text-white" onclick="window.playerApp.toggleTikTokLike(this, '${reelId}')">
+                      <div class="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center shadow">
+                        <span class="material-symbols-outlined text-2xl tiktok-like-icon text-white" style="font-variation-settings: 'FILL' 0;">favorite_border</span>
+                      </div>
+                      <span class="text-[10px] font-bold mt-1 text-white drop-shadow tiktok-like-count">${formatCount(igUserLikes[reelId].count)}</span>
+                    </button>
+
+                    <button type="button" class="flex flex-col items-center active:scale-125 transition text-white" onclick="window.playerApp.toggleTikTokDislike(this, '${reelId}')">
+                      <div class="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center shadow">
+                        <span class="material-symbols-outlined text-2xl tiktok-dislike-icon text-stone-300" style="font-variation-settings: 'FILL' 0;">thumb_down</span>
+                      </div>
+                      <span class="text-[10px] font-bold mt-1 text-white drop-shadow tiktok-dislike-count">Dislike</span>
+                    </button>
+
+                    <button type="button" class="flex flex-col items-center active:scale-125 transition text-white" onclick="window.playerApp.openInstagramComments('${reel.caption.replace(/'/g, "\\'")}', '${reel.user}')">
+                      <div class="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center shadow">
+                        <span class="material-symbols-outlined text-2xl">chat_bubble</span>
+                      </div>
+                      <span class="text-[10px] font-bold mt-1 text-white drop-shadow">1.4K</span>
+                    </button>
+
+                    <button type="button" class="flex flex-col items-center active:scale-125 transition text-white" onclick="window.playerApp.showShareMock()">
+                      <div class="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center shadow">
+                        <span class="material-symbols-outlined text-2xl">share</span>
+                      </div>
+                      <span class="text-[10px] font-bold mt-1 text-white drop-shadow">Deel</span>
+                    </button>
+                  </div>
+                </div>
               </div>
-              <span class="text-[10px] font-bold mt-1 text-white drop-shadow" id="reel-like-count">${formatCount(igUserLikes[reelId].count)}</span>
-            </button>
-
-            <!-- DISLIKE -->
-            <button type="button" id="btn-reel-dislike" class="flex flex-col items-center active:scale-125 transition text-white">
-              <div class="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center shadow">
-                <span class="material-symbols-outlined text-2xl ${igUserDislikes[reelId].disliked ? 'text-sky-400' : 'text-stone-300'}" id="reel-dislike-icon" style="${igUserDislikes[reelId].disliked ? "font-variation-settings: 'FILL' 1;" : "font-variation-settings: 'FILL' 0;"}">thumb_down</span>
-              </div>
-              <span class="text-[10px] font-bold mt-1 text-white drop-shadow" id="reel-dislike-count">${igUserDislikes[reelId].disliked ? formatCount(igUserDislikes[reelId].count) : 'Dislike'}</span>
-            </button>
-
-            <!-- COMMENT -->
-            <button type="button" id="btn-reel-comment" class="flex flex-col items-center active:scale-125 transition text-white">
-              <div class="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center shadow">
-                <span class="material-symbols-outlined text-2xl">chat_bubble</span>
-              </div>
-              <span class="text-[10px] font-bold mt-1 text-white drop-shadow">1.4K</span>
-            </button>
-
-            <!-- SHARE -->
-            <button type="button" id="btn-reel-share" class="flex flex-col items-center active:scale-125 transition text-white">
-              <div class="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center shadow">
-                <span class="material-symbols-outlined text-2xl">share</span>
-              </div>
-              <span class="text-[10px] font-bold mt-1 text-white drop-shadow">Deel</span>
-            </button>
-          </div>
+            `;
+          }).join('')}
         </div>
 
       </div>
     `;
 
-    const vid = document.getElementById('active-reel-video');
-    const muteBtn = document.getElementById('reel-mute-btn');
-    const muteIcon = document.getElementById('reel-mute-icon');
-    let muted = false;
+    const feedEl = document.getElementById('instagram-reels-feed');
+    if (!feedEl) return;
 
-    if (vid) {
-      vid.muted = false;
-      vid.volume = 0.25; // Zacht achtergrondgeluid zoals verzocht
-      const playPromise = vid.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          vid.muted = true;
-          muted = true;
-          if (muteIcon) muteIcon.textContent = 'volume_off';
-        });
-      }
-    }
-
-    if (muteBtn && vid) {
-      muteBtn.onclick = () => {
-        muted = !muted;
-        vid.muted = muted;
-        if (!muted) {
-          vid.volume = 0.25;
-          vid.play().catch(() => {});
+    // Scroll direct naar het gekozen item als er een specifieke reel was aangeklikt
+    if (initialIndex > 0) {
+      setTimeout(() => {
+        const targetItem = document.getElementById(`ig-reel-item-${initialIndex}`);
+        if (targetItem) {
+          targetItem.scrollIntoView({ behavior: 'instant', block: 'start' });
         }
-        if (muteIcon) muteIcon.textContent = muted ? 'volume_off' : 'volume_up';
-      };
+      }, 20);
     }
 
-    const likeBtn = document.getElementById('btn-reel-like');
-    const likeIcon = document.getElementById('reel-like-icon');
-    const likeCount = document.getElementById('reel-like-count');
-    const dislikeBtn = document.getElementById('btn-reel-dislike');
-    const dislikeIcon = document.getElementById('reel-dislike-icon');
-    const dislikeCount = document.getElementById('reel-dislike-count');
+    // Observer voor Instagram Reels (start uitsluitend zichtbare reel vanaf 0s met audio)
+    instagramReelObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const vid = entry.target.querySelector('.ig-reel-video-el');
+        if (!vid) return;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          feedEl.querySelectorAll('.ig-reel-video-el').forEach(other => {
+            if (other !== vid) {
+              other.pause();
+              try { other.currentTime = 0; } catch(e) {}
+            }
+          });
 
-    function updateReelActionUI() {
-      const lObj = igUserLikes[reelId];
-      const dObj = igUserDislikes[reelId];
-      if (likeIcon) {
-        likeIcon.textContent = lObj.liked ? 'favorite' : 'favorite_border';
-        likeIcon.classList.toggle('text-rose-500', lObj.liked);
-        likeIcon.classList.toggle('text-white', !lObj.liked);
-        likeIcon.style.fontVariationSettings = lObj.liked ? "'FILL' 1" : "'FILL' 0";
-      }
-      if (likeCount) likeCount.textContent = formatCount(lObj.count);
+          try { vid.currentTime = 0; } catch(e) {}
+          vid.muted = state.reelsMuted;
+          vid.volume = 0.25;
+          const p = vid.play();
+          if (p !== undefined) {
+            p.catch(() => {
+              vid.muted = true;
+              vid.play().catch(() => {});
+            });
+          }
+        } else {
+          vid.pause();
+          try { vid.currentTime = 0; } catch(e) {}
+        }
+      });
+    }, {
+      root: feedEl,
+      threshold: [0.1, 0.5, 0.8]
+    });
 
-      if (dislikeIcon) {
-        dislikeIcon.classList.toggle('text-sky-400', dObj.disliked);
-        dislikeIcon.classList.toggle('text-stone-300', !dObj.disliked);
-        dislikeIcon.style.fontVariationSettings = dObj.disliked ? "'FILL' 1" : "'FILL' 0";
-      }
-      if (dislikeCount) dislikeCount.textContent = dObj.disliked ? formatCount(dObj.count) : 'Dislike';
-    }
-
-    if (likeBtn) {
-      likeBtn.onclick = () => {
-        handleGlobalLike(reelId, reel.likes || 45200);
-        updateReelActionUI();
-      };
-    }
-
-    if (dislikeBtn) {
-      dislikeBtn.onclick = () => {
-        handleGlobalDislike(reelId, 320);
-        updateReelActionUI();
-      };
-    }
-
-    const commentBtn = document.getElementById('btn-reel-comment');
-    if (commentBtn) commentBtn.onclick = () => openInstagramComments(reel.caption, reel.user);
-
-    const shareBtn = document.getElementById('btn-reel-share');
-    if (shareBtn) {
-      shareBtn.onclick = () => {
-        if (window.sounds) window.sounds.playClick();
-        showToast('Reel link gekopieerd! 📋');
-      };
-    }
+    feedEl.querySelectorAll('.snap-feed-item').forEach(item => {
+      instagramReelObserver.observe(item);
+    });
   }
 
   // INSTAGRAM STORY VIEWER (BLIJFT BINNEN INSTAGRAM!)
@@ -2987,14 +2976,19 @@
           </div>
         </div>
 
-        <!-- Explore Grid van Foto's en Video's -->
+        <!-- Explore Grid van Dynamische Video's -->
         <div class="flex-1 overflow-y-auto grid grid-cols-3 gap-0.5 pb-20">
-          ${Array.from({ length: 15 }).map((_, idx) => `
-            <div class="aspect-square bg-stone-900 overflow-hidden relative cursor-pointer hover:opacity-90" onclick="window.playerApp.openReelFromFeed(${idx})">
-              <img src="${getRandomPicsumUrl(300, 300)}" class="w-full h-full object-cover" alt="Explore">
-              ${idx % 3 === 0 ? `<span class="material-symbols-outlined absolute top-1.5 right-1.5 text-white text-sm drop-shadow">movie</span>` : ''}
-            </div>
-          `).join('')}
+          ${Array.from({ length: 15 }).map((_, idx) => {
+            const vData = FEED_OPEN_VIDEOS[idx % FEED_OPEN_VIDEOS.length];
+            return `
+              <div class="aspect-square bg-stone-950 overflow-hidden relative cursor-pointer group hover:opacity-90 transition active:scale-95" onclick="window.playerApp.openReelFromFeed(${idx % FEED_OPEN_VIDEOS.length})">
+                <video src="${vData.url}" class="w-full h-full object-cover pointer-events-none" muted loop playsinline autoplay preload="metadata"></video>
+                <div class="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition"></div>
+                <span class="material-symbols-outlined absolute top-1.5 right-1.5 text-white text-sm drop-shadow pointer-events-none">movie</span>
+                <span class="absolute bottom-1 left-1.5 text-[9px] font-bold text-white/90 drop-shadow truncate max-w-[85%] pointer-events-none">@${vData.user}</span>
+              </div>
+            `;
+          }).join('')}
         </div>
 
         <!-- Bottom Nav -->
@@ -3270,12 +3264,6 @@
         <div id="tiktok-feed-scroll" class="flex-1 overflow-y-scroll snap-y snap-mandatory select-none">
           <!-- Dynamisch gevuld met 100% video's -->
         </div>
-
-        <!-- Handige 'Volgende video' zwevende knop voor snelle navigatie -->
-        <button type="button" onclick="window.playerApp.scrollToNextTikTokReel()" class="fixed bottom-4 right-4 z-30 px-3.5 py-2 rounded-full bg-black/80 backdrop-blur-md border border-white/20 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xl hover:bg-black active:scale-95 transition cursor-pointer">
-          <span>Volgende video</span>
-          <span class="material-symbols-outlined text-[16px]">arrow_downward</span>
-        </button>
 
       </div>
     `;
@@ -3822,6 +3810,10 @@
     if (tiktokObserver) {
       tiktokObserver.disconnect();
       tiktokObserver = null;
+    }
+    if (instagramReelObserver) {
+      instagramReelObserver.disconnect();
+      instagramReelObserver = null;
     }
     const secondsSpent = Math.round((Date.now() - (state.trapStartTime || Date.now())) / 1000);
     state.inDoomscroll = false;

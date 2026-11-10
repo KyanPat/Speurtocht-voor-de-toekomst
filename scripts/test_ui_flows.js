@@ -49,25 +49,23 @@ console.log('✓ "-15s beloning" tekst is verwijderd uit de knoptekst:', cooldow
 console.log('✓ Alle knoppen hebben uniforme styling:', cooldownHasIdenticalButtons);
 
 // 7. Controleer de "Volgend" & "Volgende" knoppen
-console.log('\n[Check 7] "Volgend" en "Volgende" functionaliteit:');
+console.log('\n[Check 7] "Volgend" & Verticale Snap Reels functionaliteit:');
 const hasTikTokVolgendTab = playerAppJs.includes("renderTikTokApp(document.getElementById('app-view-container'), 'following')");
 const hasTikTokVoorJouTab = playerAppJs.includes("renderTikTokApp(document.getElementById('app-view-container'), 'foryou')");
 const hasFollowToggle = playerAppJs.includes('toggleFollowUser') && playerAppJs.includes('isUserFollowed');
-const hasReelNextBtn = playerAppJs.includes('nextInstagramReel') && playerAppJs.includes('skip_next');
-const hasTikTokNextScroll = playerAppJs.includes('scrollToNextTikTokReel');
+const hasInstagramVerticalSnapReels = playerAppJs.includes('instagram-reels-feed') && playerAppJs.includes('snap-y snap-mandatory');
 const hasProfileFollowingModal = playerAppJs.includes('openFollowingListModal');
 
 console.log('✓ TikTok "Volgend" tab is interactief en roept following-feed aan:', hasTikTokVolgendTab);
 console.log('✓ TikTok "Voor jou" tab schakelt terug:', hasTikTokVoorJouTab);
 console.log('✓ Volgen / Volgend knop togglet creator status:', hasFollowToggle);
-console.log('✓ Volgende Reel knop in Instagram video view:', hasReelNextBtn);
-console.log('✓ Volgende Video scrollknop in TikTok:', hasTikTokNextScroll);
+console.log('✓ Instagram Reels volledige verticale snap scroll/swipe feed:', hasInstagramVerticalSnapReels);
 console.log('✓ Profiel "Volgend" opent lijst met gevolgde accounts:', hasProfileFollowingModal);
 
 // 8. Controleer Cache Busters
 console.log('\n[Check 8] Cache Busters in index.html:');
-const isCacheV19 = (indexHtml.includes('?v=19') || indexHtml.includes('?v=20')) && (indexHtml.includes('doomscroll-escape-v19') || indexHtml.includes('doomscroll-escape-v20'));
-console.log('✓ Alle scripts geüpgraded naar ?v=20 en service worker v20:', isCacheV19);
+const isCacheV22 = indexHtml.includes('?v=22') && indexHtml.includes('doomscroll-escape-v22');
+console.log('✓ Alle scripts geüpgraded naar ?v=22 en service worker v22:', isCacheV22);
 
 // 9. Controleer Like, Dislike, Video in Chat en Stippellijn
 console.log('\n[Check 9] Like/Dislike, Klikbare Video Reel en Stippellijn door alle objectives:');

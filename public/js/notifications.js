@@ -29,8 +29,8 @@ class NotificationManager {
   startAmbientDistractions() {
     if (this.isActive) return;
     this.isActive = true;
-    // Eerste notificatie start vlot na 15 seconden
-    const firstDelay = (15 + Math.random() * 5) * 1000;
+    // Eerste notificatie start vlot na 6-10 seconden na start game
+    const firstDelay = (6 + Math.random() * 4) * 1000;
     this.timer = setTimeout(() => {
       if (this.isActive) {
         this.triggerRandomDistraction();
@@ -49,8 +49,8 @@ class NotificationManager {
 
   scheduleNext() {
     if (!this.isActive) return;
-    // Willekeurig tussen 15 en 30 seconden door de loop van de game
-    const delay = (15 + Math.random() * 15) * 1000;
+    // Regelmatig tussen 15 en 25 seconden gedurende het spel
+    const delay = (15 + Math.random() * 10) * 1000;
     this.timer = setTimeout(() => {
       if (this.isActive) {
         this.triggerRandomDistraction();
@@ -74,7 +74,9 @@ class NotificationManager {
     this.lastShownTime = now;
 
     this.createContainer();
-    if (window.sounds) window.sounds.playNotification();
+    if (window.sounds) {
+      window.sounds.playNotification(notif.app || notif.platform || 'instagram');
+    }
 
     const banner = document.createElement('div');
     banner.className = 'pointer-events-auto w-full max-w-[390px] mb-2 bg-stone-900/95 backdrop-blur-md text-white rounded-2xl p-3.5 shadow-2xl border border-stone-700/60 transform -translate-y-full opacity-0 transition-all duration-300 select-none cursor-pointer';
