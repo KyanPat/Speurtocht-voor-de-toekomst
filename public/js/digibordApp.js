@@ -436,7 +436,7 @@
     });
 
     document.getElementById('admin-btn-end').addEventListener('click', () => {
-      if (confirm('Weet je zeker dat je de speurtocht direct wilt beëindigen?')) {
+      if (confirm('Weet je zeker dat je het spel direct wilt beëindigen?')) {
         socket.emit('admin:end_game');
       }
     });
@@ -489,7 +489,7 @@
       renderLobbyPlayers();
     } else if (state.status === 'PLAYING') {
       views.active.classList.remove('hidden');
-      statusText.textContent = 'SPEURTOCHT ACTIEF';
+      statusText.textContent = 'SPEL ACTIEF';
       statusBadge.className = 'px-3.5 py-1 rounded-full text-xs font-bold font-mono tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-600/40 flex items-center gap-1.5 shadow';
       if (pauseLabel) pauseLabel.textContent = 'Pauzeer';
       updateTimer();

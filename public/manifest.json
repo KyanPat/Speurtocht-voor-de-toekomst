@@ -1,7 +1,7 @@
 {
-  "name": "Doomscroll Escape - Speurtocht voor de Toekomst",
+  "name": "Doomscroll Escape",
   "short_name": "Doomscroll",
-  "description": "Een real-time locatiegebaseerde multiplayer speurtocht tegen schermverslaving en doomscrollen.",
+  "description": "Een real-time locatiegebaseerde multiplayer escape game tegen schermverslaving en doomscrollen.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

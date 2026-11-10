@@ -1,5 +1,5 @@
-// Service Worker voor Doomscroll Escape PWA (v22 - Native Vertical Reels, Real Platform Sounds, 15m/All Items End)
-const CACHE_NAME = 'doomscroll-escape-v22';
+// Service Worker voor Doomscroll Escape PWA (v24 - Infinite API Reels & Sound, Modal Navigation Fix)
+const CACHE_NAME = 'doomscroll-escape-v24';
 
 // Essentiële core bestanden voor offline werking en data-besparing
 const CORE_ASSETS = [
@@ -8,10 +8,10 @@ const CORE_ASSETS = [
   '/digibord.html',
   '/manifest.json',
   '/css/app.css',
-  '/js/itemsData.js?v=22',
-  '/js/playerApp.js?v=22',
-  '/js/soundEffects.js?v=22',
-  '/js/notifications.js?v=22',
+  '/js/itemsData.js?v=24',
+  '/js/playerApp.js?v=24',
+  '/js/soundEffects.js?v=24',
+  '/js/notifications.js?v=24',
   '/assets/sounds/whatsapp.wav',
   '/assets/sounds/snapchat.wav',
   '/assets/sounds/instagram.wav',

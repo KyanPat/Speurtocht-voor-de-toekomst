@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ebd8b8">
-  <title>Doomscroll Escape - Speurtocht voor de Toekomst</title>
+  <title>Doomscroll Escape</title>
   
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
@@ -74,7 +74,7 @@
         </div>
 
         <h1 class="font-display text-2xl font-black text-stone-900 leading-tight">Doomscroll Escape</h1>
-        <p class="text-xs text-stone-600 mt-1 mb-5 font-medium">Speurtocht voor de toekomst • Ontsnap aan de schermvalstrikken!</p>
+        <p class="text-xs text-stone-600 mt-1 mb-5 font-medium">Ontsnap aan de schermvalstrikken!</p>
 
         <!-- Naam Invoerveld -->
         <div class="w-full text-left mb-4">
@@ -97,7 +97,7 @@
 
         <!-- Join Knop -->
         <button id="btn-join-game" type="button" onclick="if(window.playerApp && window.playerApp.joinGame) window.playerApp.joinGame()" class="w-full py-3.5 px-6 rounded-xl bg-primary hover:bg-primary-dark active:scale-[0.98] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
-          <span>Doe mee met de speurtocht</span>
+          <span>Doe mee aan het spel</span>
           <span class="material-symbols-outlined text-base">arrow_forward</span>
         </button>
       </div>
@@ -250,7 +250,7 @@
         <div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center text-3xl mb-3 shadow-inner">
           🏆
         </div>
-        <h2 class="font-display text-2xl font-black text-stone-900">Speurtocht Afgelopen!</h2>
+        <h2 class="font-display text-2xl font-black text-stone-900">Spel Afgelopen!</h2>
         <p id="game-over-reason" class="text-xs text-stone-600 mt-1 mb-4">De 15 minuten zijn voorbij.</p>
 
         <!-- Jouw Resultaat Card -->
@@ -289,25 +289,25 @@
     }
   </script>
 
-  <!-- Applicatie Scripts met Cache Buster (v22) -->
-  <script src="/js/itemsData.js?v=22"></script>
-  <script src="/js/soundEffects.js?v=22"></script>
-  <script src="/js/notifications.js?v=22"></script>
-  <script src="/js/playerApp.js?v=22"></script>
+  <!-- Applicatie Scripts met Cache Buster (v24) -->
+  <script src="/js/itemsData.js?v=24"></script>
+  <script src="/js/soundEffects.js?v=24"></script>
+  <script src="/js/notifications.js?v=24"></script>
+  <script src="/js/playerApp.js?v=24"></script>
 
   <!-- PWA Service Worker registratie met forceer-update -->
   <script>
     if ('caches' in window) {
       caches.keys().then(keys => {
         keys.forEach(k => {
-          if (k !== 'doomscroll-escape-v22') caches.delete(k);
+          if (k !== 'doomscroll-escape-v24') caches.delete(k);
         });
       });
     }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=22')
+        navigator.serviceWorker.register('/sw.js?v=24')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);

@@ -117,6 +117,97 @@ app.get('/api/settings', (req, res) => {
 });
 
 // ==========================================
+// REST API VOOR ONEINDIGE VIDEO & AUDIO FEED
+// ==========================================
+const REEL_BASE_VIDEOS = [
+  { url: '/assets/videos/friday_chill.mp4', sound: 'Origineel Geluid - Friday Sunset Chill (Akkoorden & Golven) 🎵', credits: 'Mozilla Open Web Media • CC0' },
+  { url: '/assets/videos/bear_stream.mp4', sound: 'Origineel Geluid - Ruisende Bergrivier & Beer Plons 🌊', credits: 'W3C Open Media • CC0' },
+  { url: '/assets/videos/echo_music.mp4', sound: 'Origineel Geluid - Echo: Here We Are (Vocal & Drums) 🎸', credits: 'Echo Band / MediaElement • CC-BY' },
+  { url: '/assets/videos/sintel_trailer.mp4', sound: 'Origineel Geluid - Jan Morgenstern (Sintel Dragon Score) 🐉', credits: 'Blender Open Movie • CC-BY' },
+  { url: '/assets/videos/bunny_cartoon.mp4', sound: 'Origineel Geluid - Vrolijke Bunny Beats & Fluitende Vogels 🐰', credits: 'Blender Foundation • CC-BY' },
+  { url: '/assets/videos/movie_300.mp4', sound: 'Origineel Geluid - Hollywood Action Drums & Effects 🎬', credits: 'W3C HTML5 Video Test • CC-BY' },
+  { url: '/assets/videos/oceans.mp4', sound: 'Origineel Geluid - Ocean Symphony & Onderwater Ambience 🐬', credits: 'VideoJS Oceans Open Project' },
+  { url: '/assets/videos/bunny_short.mp4', sound: 'Origineel Geluid - Cartoon Fun Soundtrack 🎶', credits: 'Open Animation Hub • CC-BY' }
+];
+
+const REEL_CREATORS = [
+  { user: 'sunset_vibes_nl', avatar: 'https://i.pravatar.cc/150?img=11' },
+  { user: 'nature_wildlife_nl', avatar: 'https://i.pravatar.cc/150?img=33' },
+  { user: 'echo_band_official', avatar: 'https://i.pravatar.cc/150?img=47' },
+  { user: 'open_cinema_hub', avatar: 'https://i.pravatar.cc/150?img=53' },
+  { user: 'blender_open_anim', avatar: 'https://i.pravatar.cc/150?img=20' },
+  { user: 'action_visuals_nl', avatar: 'https://i.pravatar.cc/150?img=22' },
+  { user: 'deep_ocean_explorer', avatar: 'https://i.pravatar.cc/150?img=65' },
+  { user: 'daan.vlogz', avatar: 'https://i.pravatar.cc/150?img=12' },
+  { user: 'lisa.kramer', avatar: 'https://i.pravatar.cc/150?img=1' },
+  { user: 'sophie_outdoor', avatar: 'https://i.pravatar.cc/150?img=5' },
+  { user: 'bram.student', avatar: 'https://i.pravatar.cc/150?img=8' },
+  { user: 'lars.adventures', avatar: 'https://i.pravatar.cc/150?img=15' },
+  { user: 'foodie_sarah_nl', avatar: 'https://i.pravatar.cc/150?img=49' },
+  { user: 'urban_beats_020', avatar: 'https://i.pravatar.cc/150?img=60' }
+];
+
+const REEL_CAPTIONS = [
+  'De golven tijdens een gouden zonsondergang op vrijdagavond... 🌅🌊 Zet je geluid even lekker aan! #sunset #ocean #relax #chill',
+  'Wat een natuurgeweld! Gigantische beer vangt verse vis in de woeste stroomversnelling 🐻🐟 #wildlife #nature #river #salmon',
+  'Onze nieuwe single "Here We Are" is uit! 🎸🔥 Wat vinden jullie van het refrein? #newmusic #indierock #vibes #live',
+  'Sintel: epische zoektocht van een dappere krijger door de besneeuwde bergen ⚔️🐉 Prachtige cinematische animatie! #sintel #openmovie #cgi',
+  'Wanneer je dacht dat het weekend was maar het is pas woensdag... 💀😭 #relatable #humor #weekendvibes #viral',
+  'Kijk naar die camerahoek en cinematische slow motion! 🎥💥 Prachtig staaltje actiewerk. #action #visuals #epic #slowmo',
+  'Duik mee in de diepblauwe oceaan tussen de dolfijnen en koraalriffen 🐬🌊 Onwerkelijk rustgevend! #oceanlife #marinelife #deepblue',
+  'Wie herkent dit moment? Als je net op de bank ligt en je telefoon begint te rinkelen 😂📱 #fyp #grappig #herkenbaar',
+  'POV: Je probeert productief te zijn maar je belandt in een oneindige scrollsessie... 👀⌛ #scrolling #trap #fail',
+  'Dit uitzicht verveelt echt nooit! De mooiste plekjes ontdekken 🇳🇱✨ #wanderlust #nature #explore',
+  'Volume op 100%! Deze beat is echt ongekend lekker 🔥🎧 #electronic #music #vibes #trending',
+  'Even een reminder om vandaag wat rust te nemen en van het moment te genieten ✨🌿 #mindfulness #goodvibes #chill'
+];
+
+function generateReelsFeed(cursor = 0, limit = 4, platform = 'all') {
+  const reels = [];
+  for (let idx = 0; idx < limit; idx++) {
+    const i = cursor + idx;
+    const v = REEL_BASE_VIDEOS[i % REEL_BASE_VIDEOS.length];
+    const c = REEL_CREATORS[i % REEL_CREATORS.length];
+    const cap = REEL_CAPTIONS[i % REEL_CAPTIONS.length];
+
+    const likes = ((i * 4721 + 18200) % 95000) + 5200;
+    const dislikes = ((i * 83 + 120) % 450) + 15;
+    const comments = ((i * 389 + 640) % 3500) + 120;
+
+    reels.push({
+      id: `${platform}_reel_${i}`,
+      index: i,
+      url: v.url,
+      sound: v.sound,
+      credits: v.credits,
+      user: c.user,
+      avatar: c.avatar,
+      caption: cap,
+      likes,
+      dislikes,
+      commentsCount: comments
+    });
+  }
+  return reels;
+}
+
+app.get('/api/reels/feed', (req, res) => {
+  const cursor = Math.max(0, parseInt(req.query.cursor, 10) || 0);
+  const limit = Math.min(10, Math.max(1, parseInt(req.query.limit, 10) || 4));
+  const platform = req.query.platform || 'instagram';
+
+  const reels = generateReelsFeed(cursor, limit, platform);
+  res.json({
+    success: true,
+    cursor,
+    limit,
+    nextCursor: cursor + limit,
+    hasMore: true,
+    reels
+  });
+});
+
+// ==========================================
 // IN-MEMORY SPELTOESTAND (SERVER-SIDE STATE)
 // ==========================================
 const GAME_DURATION_SECONDS = 15 * 60; // 15 minuten = 900 seconden
