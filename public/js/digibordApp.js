@@ -7,6 +7,7 @@
     timeRemaining: 900,
     totalDuration: 900,
     formattedTime: '15:00',
+    limitedItemsMaxClaims: 1,
     limitedItems: {},
     generalItems: {},
     leaderboard: [],
@@ -61,10 +62,12 @@
       state.generalItems = data.generalItems || {};
       state.leaderboard = data.leaderboard || [];
       state.jobRaiseUnlockSecondsLeft = data.jobRaiseUnlockSecondsLeft;
+      if (data.limitedItemsMaxClaims) state.limitedItemsMaxClaims = data.limitedItemsMaxClaims;
       if (data.activityLog) state.activityLog = data.activityLog;
 
       syncItemsData();
       renderLobbyLocations();
+      updateLimitedQuickButtons();
       updateView();
     });
 
@@ -247,6 +250,21 @@
   // ==========================================
   // SPELINSTELLINGEN & LOCATIES MODAL
   // ==========================================
+  function updateLimitedQuickButtons() {
+    const max = state.limitedItemsMaxClaims || 1;
+    const b1 = document.getElementById('btn-quick-limited-1');
+    const b2 = document.getElementById('btn-quick-limited-2');
+    if (b1 && b2) {
+      if (max === 1) {
+        b1.className = 'px-2 py-0.5 rounded-md font-bold transition text-amber-300 bg-amber-950 border border-amber-600/60 cursor-pointer shadow-sm';
+        b2.className = 'px-2 py-0.5 rounded-md font-bold transition text-stone-400 hover:text-white cursor-pointer';
+      } else {
+        b1.className = 'px-2 py-0.5 rounded-md font-bold transition text-stone-400 hover:text-white cursor-pointer';
+        b2.className = 'px-2 py-0.5 rounded-md font-bold transition text-amber-300 bg-amber-950 border border-amber-600/60 cursor-pointer shadow-sm';
+      }
+    }
+  }
+
   function setupSettingsModal() {
     const btnHeaderSettings = document.getElementById('btn-header-settings');
     const btnLobbySettings = document.getElementById('btn-lobby-settings');
@@ -255,6 +273,28 @@
     const btnCancel = document.getElementById('btn-cancel-settings');
     const btnSave = document.getElementById('btn-save-settings');
     const btnReset = document.getElementById('btn-reset-defaults');
+    const btnQuickLim1 = document.getElementById('btn-quick-limited-1');
+    const btnQuickLim2 = document.getElementById('btn-quick-limited-2');
+
+    if (btnQuickLim1) {
+      btnQuickLim1.addEventListener('click', () => {
+        socket.emit('admin:set_limited_claims', { maxClaims: 1 });
+        state.limitedItemsMaxClaims = 1;
+        updateLimitedQuickButtons();
+        renderLobbyLocations();
+        if (window.sounds) window.sounds.playClick();
+      });
+    }
+
+    if (btnQuickLim2) {
+      btnQuickLim2.addEventListener('click', () => {
+        socket.emit('admin:set_limited_claims', { maxClaims: 2 });
+        state.limitedItemsMaxClaims = 2;
+        updateLimitedQuickButtons();
+        renderLobbyLocations();
+        if (window.sounds) window.sounds.playClick();
+      });
+    }
 
     const openModal = () => {
       renderSettingsInputs();
@@ -299,11 +339,16 @@
   function renderSettingsInputs() {
     const container = document.getElementById('settings-items-list');
     const durationSelect = document.getElementById('setting-game-duration');
+    const limitedSelect = document.getElementById('setting-limited-claims');
     if (!container) return;
 
     if (durationSelect) {
       const currentMins = Math.round(state.totalDuration / 60);
       durationSelect.value = String(currentMins);
+    }
+
+    if (limitedSelect) {
+      limitedSelect.value = String(state.limitedItemsMaxClaims || 1);
     }
 
     container.innerHTML = '';
@@ -328,7 +373,7 @@
             <span class="text-xs font-bold text-white truncate">${name}</span>
           </div>
           <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${isLimited ? 'bg-amber-950 text-amber-300 border border-amber-600/40' : 'bg-stone-800 text-stone-300'}">
-            ${isLimited ? 'Limited' : 'Algemeen'}
+            ${isLimited ? `Limited (${state.limitedItemsMaxClaims || 1}x)` : 'Algemeen'}
           </span>
         </div>
 
@@ -349,7 +394,9 @@
 
   function saveSettings(onSuccess) {
     const durationSelect = document.getElementById('setting-game-duration');
+    const limitedSelect = document.getElementById('setting-limited-claims');
     const durationMinutes = durationSelect ? parseInt(durationSelect.value, 10) : 15;
+    const limitedItemsMaxClaims = limitedSelect ? parseInt(limitedSelect.value, 10) : (state.limitedItemsMaxClaims || 1);
 
     const itemsUpdate = {};
     ALL_ITEM_IDS.forEach(id => {
@@ -365,11 +412,14 @@
 
     socket.emit('settings:update', {
       durationMinutes,
+      limitedItemsMaxClaims,
       items: itemsUpdate
     }, (res) => {
       if (res && res.success) {
         state.generalItems = res.generalItems;
         state.limitedItems = res.limitedItems;
+        state.limitedItemsMaxClaims = limitedItemsMaxClaims;
+        updateLimitedQuickButtons();
         syncItemsData();
         renderLobbyLocations();
         if (window.sounds) window.sounds.playSuccess();
@@ -388,6 +438,7 @@
       const serverItem = state.limitedItems[id] || state.generalItems[id] || {};
       const name = serverItem.name || localItem?.name || id;
       const isLimited = serverItem.isLimited !== undefined ? serverItem.isLimited : (localItem?.isLimited || false);
+      const maxClaims = serverItem.maxClaims || state.limitedItemsMaxClaims || 1;
       const location = (isLimited && (serverItem.secretLocation || localItem?.secretLocation))
         ? (serverItem.secretLocation || localItem?.secretLocation)
         : (serverItem.location || localItem?.location || 'Nader te bepalen');
@@ -397,7 +448,10 @@
         isLimited ? 'bg-amber-950/20 border-amber-800/40 text-amber-200' : 'bg-stone-900 border-stone-800 text-stone-300'
       }`;
       chip.innerHTML = `
-        <span class="text-[10px] font-bold truncate">${name}</span>
+        <div class="flex items-center justify-between gap-1">
+          <span class="text-[10px] font-bold truncate">${name}</span>
+          ${isLimited ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700/50">${maxClaims}x</span>` : ''}
+        </div>
         <span class="text-[10px] text-stone-400 truncate mt-0.5">📍 ${location}</span>
       `;
       container.appendChild(chip);
@@ -614,65 +668,32 @@
     const date = state.limitedItems.date;
     const trouwen = state.limitedItems.trouwen;
 
-    // 1. Interview
-    const badgeInterview = document.getElementById('badge-status-interview');
-    if (interview && badgeInterview) {
-      if (interview.claimedBy) {
-        badgeInterview.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-700/50';
-        badgeInterview.innerHTML = `<span>✓</span> Geclaimd door ${interview.claimedByName}`;
-      } else {
-        badgeInterview.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/40';
-        badgeInterview.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Beschikbaar`;
-      }
-    }
+    const renderBadge = (badgeEl, item, isLocked, unlockSeconds) => {
+      if (!item || !badgeEl) return;
+      const max = item.maxClaims || state.limitedItemsMaxClaims || 1;
+      const claims = item.claims || (item.claimedBy ? [{ playerId: item.claimedBy, playerName: item.claimedByName }] : []);
+      const count = claims.length;
 
-    // 2. Raise
-    const badgeRaise = document.getElementById('badge-status-raise');
-    if (raise && badgeRaise) {
-      if (raise.claimedBy) {
-        badgeRaise.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-700/50';
-        badgeRaise.innerHTML = `<span>✓</span> Geclaimd door ${raise.claimedByName}`;
-      } else if (raise.isLocked) {
-        const timerTxt = state.jobRaiseUnlockSecondsLeft < 60 && state.jobRaiseUnlockSecondsLeft > 0 
-          ? ` (nog ${state.jobRaiseUnlockSecondsLeft}s)` 
-          : '';
-        badgeRaise.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-stone-800 text-stone-400 border border-stone-700';
-        badgeRaise.innerHTML = `<span>🔒</span> Vergrendeld${timerTxt}`;
+      if (count >= max) {
+        badgeEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-700/50';
+        badgeEl.innerHTML = `<span>✓</span> Geclaimd (${count}/${max}) door ${item.claimedByName || claims.map(c => c.playerName).join(', ')}`;
+      } else if (isLocked) {
+        const timerTxt = unlockSeconds < 60 && unlockSeconds > 0 ? ` (nog ${unlockSeconds}s)` : '';
+        badgeEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-stone-800 text-stone-400 border border-stone-700';
+        badgeEl.innerHTML = `<span>🔒</span> Vergrendeld${timerTxt}`;
+      } else if (count > 0) {
+        badgeEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-600 animate-pulse';
+        badgeEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> ${count}/${max} geclaimd (nog ${max - count} over!)`;
       } else {
-        badgeRaise.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-600 animate-pulse';
-        badgeRaise.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> NU ONTGRENDELD!`;
+        badgeEl.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/40';
+        badgeEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Beschikbaar (${max}x)`;
       }
-    }
+    };
 
-    // 3. Date
-    const badgeDate = document.getElementById('badge-status-date');
-    if (date && badgeDate) {
-      if (date.claimedBy) {
-        badgeDate.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-700/50';
-        badgeDate.innerHTML = `<span>✓</span> Geclaimd door ${date.claimedByName}`;
-      } else {
-        badgeDate.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700/40';
-        badgeDate.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Beschikbaar`;
-      }
-    }
-
-    // 4. Trouwen
-    const badgeTrouwen = document.getElementById('badge-status-trouwen');
-    if (trouwen && badgeTrouwen) {
-      if (trouwen.claimedBy) {
-        badgeTrouwen.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-700/50';
-        badgeTrouwen.innerHTML = `<span>✓</span> Geclaimd door ${trouwen.claimedByName}`;
-      } else if (trouwen.isLocked) {
-        const timerTxt = state.trouwenUnlockSecondsLeft < 60 && state.trouwenUnlockSecondsLeft > 0 
-          ? ` (nog ${state.trouwenUnlockSecondsLeft}s)` 
-          : '';
-        badgeTrouwen.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-stone-800 text-stone-400 border border-stone-700';
-        badgeTrouwen.innerHTML = `<span>🔒</span> Vergrendeld${timerTxt}`;
-      } else {
-        badgeTrouwen.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-600 animate-pulse';
-        badgeTrouwen.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> NU ONTGRENDELD!`;
-      }
-    }
+    renderBadge(document.getElementById('badge-status-interview'), interview, false, 0);
+    renderBadge(document.getElementById('badge-status-raise'), raise, raise?.isLocked, state.jobRaiseUnlockSecondsLeft);
+    renderBadge(document.getElementById('badge-status-date'), date, false, 0);
+    renderBadge(document.getElementById('badge-status-trouwen'), trouwen, trouwen?.isLocked, state.trouwenUnlockSecondsLeft);
   }
 
   function renderLeaderboard() {

@@ -44,16 +44,19 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 app.use(express.json());
 
-// Routes
+// Routes met strikte no-cache headers zodat updates direct op mobiele schermen verschijnen
 app.get('/', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.get('/digibord', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'public', 'digibord.html'));
 });
 
 app.get('/admin', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'public', 'digibord.html'));
 });
 
@@ -127,7 +130,10 @@ const REEL_BASE_VIDEOS = [
   { url: '/assets/videos/bunny_cartoon.mp4', sound: 'Origineel Geluid - Vrolijke Bunny Beats & Fluitende Vogels 🐰', credits: 'Blender Foundation • CC-BY' },
   { url: '/assets/videos/movie_300.mp4', sound: 'Origineel Geluid - Hollywood Action Drums & Effects 🎬', credits: 'W3C HTML5 Video Test • CC-BY' },
   { url: '/assets/videos/oceans.mp4', sound: 'Origineel Geluid - Ocean Symphony & Onderwater Ambience 🐬', credits: 'VideoJS Oceans Open Project' },
-  { url: '/assets/videos/bunny_short.mp4', sound: 'Origineel Geluid - Cartoon Fun Soundtrack 🎶', credits: 'Open Animation Hub • CC-BY' }
+  { url: '/assets/videos/bunny_short.mp4', sound: 'Origineel Geluid - Cartoon Fun Soundtrack 🎶', credits: 'Open Animation Hub • CC-BY' },
+  { url: '/assets/videos/flower_blooming.mp4', sound: 'Origineel Geluid - Bloeiende Lente & Rustgevende Klanken 🌸', credits: 'MDN Open Media • CC0' },
+  { url: '/assets/videos/big_buck_sample.mp4', sound: 'Origineel Geluid - Forest Groove Beats 🎧', credits: 'Peach Open Movie Project • CC-BY' },
+  { url: '/assets/videos/trailer_sample.mp4', sound: 'Origineel Geluid - Cinematic Action Trailer 💥', credits: 'W3C Open Test Suite • CC-BY' }
 ];
 
 const REEL_CREATORS = [
@@ -174,19 +180,44 @@ function generateReelsFeed(cursor = 0, limit = 4, platform = 'all') {
     const dislikes = ((i * 83 + 120) % 450) + 15;
     const comments = ((i * 389 + 640) % 3500) + 120;
 
-    reels.push({
-      id: `${platform}_reel_${i}`,
-      index: i,
-      url: v.url,
-      sound: v.sound,
-      credits: v.credits,
-      user: c.user,
-      avatar: c.avatar,
-      caption: cap,
-      likes,
-      dislikes,
-      commentsCount: comments
-    });
+    // Afbeeldingen van gratis API (Picsum) die dankzij een unieke seed per post nooit herhalen
+    const isPhotoReel = (i % 3 === 2);
+
+    if (isPhotoReel) {
+      const seed = `reel_${platform}_${i}_${(i * 3571 + 104729) % 999999}`;
+      const photoUrl = `https://picsum.photos/seed/${seed}/1080/1920`;
+
+      reels.push({
+        id: `${platform}_photo_${i}`,
+        index: i,
+        mediaType: 'image',
+        url: photoUrl,
+        audioUrl: v.url,
+        sound: v.sound,
+        credits: 'Picsum Photos API • Free Open License',
+        user: c.user,
+        avatar: c.avatar,
+        caption: cap,
+        likes,
+        dislikes,
+        commentsCount: comments
+      });
+    } else {
+      reels.push({
+        id: `${platform}_reel_${i}`,
+        index: i,
+        mediaType: 'video',
+        url: v.url,
+        sound: v.sound,
+        credits: v.credits,
+        user: c.user,
+        avatar: c.avatar,
+        caption: cap,
+        likes,
+        dislikes,
+        commentsCount: comments
+      });
+    }
   }
   return reels;
 }
@@ -221,6 +252,8 @@ const INITIAL_LIMITED_ITEMS = {
     points: 1,
     code: '2413',
     isLimited: true,
+    maxClaims: 1,
+    claims: [],
     claimedBy: null,
     claimedByName: null,
     claimedAt: null
@@ -234,9 +267,12 @@ const INITIAL_LIMITED_ITEMS = {
     code: '1243',
     isLimited: true,
     isLocked: true,
+    maxClaims: 1,
+    claims: [],
+    eligiblePlayerIds: [],
     eligiblePlayerId: null,
     eligiblePlayerName: null,
-    unlockCountdown: 60, // 1 minuut na claimen interview (alleen voor de winnaar)
+    unlockCountdown: 60, // 1 minuut na claimen interview (alleen voor de winnaar(s))
     claimedBy: null,
     claimedByName: null,
     claimedAt: null
@@ -249,6 +285,8 @@ const INITIAL_LIMITED_ITEMS = {
     points: 1,
     code: '3442',
     isLimited: true,
+    maxClaims: 1,
+    claims: [],
     claimedBy: null,
     claimedByName: null,
     claimedAt: null
@@ -262,9 +300,12 @@ const INITIAL_LIMITED_ITEMS = {
     code: '3443',
     isLimited: true,
     isLocked: true,
+    maxClaims: 1,
+    claims: [],
+    eligiblePlayerIds: [],
     eligiblePlayerId: null,
     eligiblePlayerName: null,
-    unlockCountdown: 60, // 1 minuut na voltooien date (alleen voor de winnaar)
+    unlockCountdown: 60, // 1 minuut na voltooien date (alleen voor de winnaar(s))
     claimedBy: null,
     claimedByName: null,
     claimedAt: null
@@ -310,6 +351,7 @@ let gameState = {
   status: 'LOBBY', // 'LOBBY' | 'PLAYING' | 'PAUSED' | 'ENDED'
   timeRemaining: GAME_DURATION_SECONDS,
   totalDuration: GAME_DURATION_SECONDS,
+  limitedItemsMaxClaims: 1,
   players: {}, // socketId of UUID -> playerData
   limitedItems: JSON.parse(JSON.stringify(INITIAL_LIMITED_ITEMS)),
   generalItems: JSON.parse(JSON.stringify(INITIAL_GENERAL_ITEMS)),
@@ -370,6 +412,7 @@ function broadcastFullState() {
     timeRemaining: gameState.timeRemaining,
     formattedTime: formatSeconds(gameState.timeRemaining),
     totalDuration: gameState.totalDuration,
+    limitedItemsMaxClaims: gameState.limitedItemsMaxClaims || 1,
     limitedItems: gameState.limitedItems,
     generalItems: gameState.generalItems,
     leaderboard: getLeaderboard(),
@@ -394,8 +437,14 @@ function checkGameOverCondition() {
   const generalKeys = Object.keys(gameState.generalItems);
   const limitedKeys = Object.keys(gameState.limitedItems);
 
-  // Zijn alle limited items geclaimd?
-  const allLimitedClaimed = limitedKeys.every(k => gameState.limitedItems[k] && gameState.limitedItems[k].claimedBy !== null);
+  // Zijn alle limited items geclaimd (volgens maxClaims)?
+  const allLimitedClaimed = limitedKeys.every(k => {
+    const itm = gameState.limitedItems[k];
+    if (!itm) return true;
+    const max = itm.maxClaims || gameState.limitedItemsMaxClaims || 1;
+    const count = (itm.claims && itm.claims.length) || (itm.claimedBy !== null ? 1 : 0);
+    return count >= max;
+  });
 
   // Heeft een speler alle 4 standaard items verkregen?
   const anyPlayerHasAllGeneral = playerValues.some(p => 
@@ -692,8 +741,32 @@ io.on('connection', (socket) => {
     resetGame();
   });
 
+  socket.on('admin:set_limited_claims', (data) => {
+    if (!data || !data.maxClaims) return;
+    const max = Math.max(1, parseInt(data.maxClaims, 10));
+    gameState.limitedItemsMaxClaims = max;
+    Object.values(gameState.limitedItems).forEach(item => {
+      item.maxClaims = max;
+    });
+    addActivityLog(`Voorraad per limited item ingesteld op ${max}x per item.`, 'info');
+    io.emit('settings:updated', {
+      generalItems: gameState.generalItems,
+      limitedItems: gameState.limitedItems,
+      limitedItemsMaxClaims: gameState.limitedItemsMaxClaims,
+      totalDuration: gameState.totalDuration
+    });
+    broadcastFullState();
+  });
+
   socket.on('settings:update', (data, callback) => {
     if (!data) return;
+    if (data.limitedItemsMaxClaims) {
+      const max = Math.max(1, parseInt(data.limitedItemsMaxClaims, 10));
+      gameState.limitedItemsMaxClaims = max;
+      Object.values(gameState.limitedItems).forEach(item => {
+        item.maxClaims = max;
+      });
+    }
     if (data.items) {
       Object.keys(data.items).forEach(id => {
         const itemUpdate = data.items[id];
@@ -861,26 +934,36 @@ io.on('connection', (socket) => {
     }
 
     // Exclusiviteit follow-up items controleren:
-    // Job Raise mag ALLEEN geclaimd worden door de speler die het Job Interview heeft behaald
+    // Job Raise mag ALLEEN geclaimd worden door de speler(s) die het Job Interview hebben behaald
     if (itemId === 'job_raise') {
-      const interviewClaimedBy = gameState.limitedItems.job_interview?.claimedBy;
-      const interviewWinnerName = gameState.limitedItems.job_interview?.claimedByName || 'de winnaar van het Job Interview';
-      if (!interviewClaimedBy || socket.data.playerId !== interviewClaimedBy) {
+      const interviewItem = gameState.limitedItems.job_interview;
+      const eligibleIds = interviewItem?.claims && interviewItem.claims.length > 0
+        ? interviewItem.claims.map(c => c.playerId)
+        : (interviewItem?.claimedBy ? [interviewItem.claimedBy] : []);
+      if (eligibleIds.length === 0 || !eligibleIds.includes(socket.data.playerId)) {
+        const interviewWinners = interviewItem?.claims?.map(c => c.playerName).join(' en ')
+          || interviewItem?.claimedByName
+          || 'de winnaar van het Job Interview';
         if (callback) callback({
           success: false,
-          error: `🔒 Alleen ${interviewWinnerName} (winnaar van het Job Interview) kan de Job Raise claimen!`
+          error: `🔒 Alleen ${interviewWinners} (winnaar van het Job Interview) kan de Job Raise claimen!`
         });
         return;
       }
     }
-    // Trouwen mag ALLEEN geclaimd worden door de speler die de Date heeft behaald
+    // Trouwen mag ALLEEN geclaimd worden door de speler(s) die de Date hebben behaald
     if (itemId === 'trouwen') {
-      const dateClaimedBy = gameState.limitedItems.date?.claimedBy;
-      const dateWinnerName = gameState.limitedItems.date?.claimedByName || 'de winnaar van de Date';
-      if (!dateClaimedBy || socket.data.playerId !== dateClaimedBy) {
+      const dateItem = gameState.limitedItems.date;
+      const eligibleIds = dateItem?.claims && dateItem.claims.length > 0
+        ? dateItem.claims.map(c => c.playerId)
+        : (dateItem?.claimedBy ? [dateItem.claimedBy] : []);
+      if (eligibleIds.length === 0 || !eligibleIds.includes(socket.data.playerId)) {
+        const dateWinners = dateItem?.claims?.map(c => c.playerName).join(' en ')
+          || dateItem?.claimedByName
+          || 'de winnaar van de Date';
         if (callback) callback({
           success: false,
-          error: `🔒 Alleen ${dateWinnerName} (winnaar van de Date) kan gaan Trouwen!`
+          error: `🔒 Alleen ${dateWinners} (winnaar van de Date) kan gaan Trouwen!`
         });
         return;
       }
@@ -914,41 +997,59 @@ io.on('connection', (socket) => {
 
     // Exclusiviteit follow-up items controleren:
     if (itemId === 'job_raise') {
-      const interviewClaimedBy = gameState.limitedItems.job_interview?.claimedBy;
-      const interviewWinnerName = gameState.limitedItems.job_interview?.claimedByName || 'de winnaar van het Job Interview';
-      if (!interviewClaimedBy || playerId !== interviewClaimedBy) {
+      const interviewItem = gameState.limitedItems.job_interview;
+      const eligibleIds = interviewItem?.claims && interviewItem.claims.length > 0
+        ? interviewItem.claims.map(c => c.playerId)
+        : (interviewItem?.claimedBy ? [interviewItem.claimedBy] : []);
+      if (eligibleIds.length === 0 || !eligibleIds.includes(playerId)) {
+        const interviewWinners = interviewItem?.claims?.map(c => c.playerName).join(' en ')
+          || interviewItem?.claimedByName
+          || 'de winnaar van het Job Interview';
         if (callback) callback({
           success: false,
-          error: `🔒 Alleen ${interviewWinnerName} (winnaar van het Job Interview) kan de Job Raise claimen!`
+          error: `🔒 Alleen ${interviewWinners} (winnaar van het Job Interview) kan de Job Raise claimen!`
         });
         return;
       }
     }
     if (itemId === 'trouwen') {
-      const dateClaimedBy = gameState.limitedItems.date?.claimedBy;
-      const dateWinnerName = gameState.limitedItems.date?.claimedByName || 'de winnaar van de Date';
-      if (!dateClaimedBy || playerId !== dateClaimedBy) {
+      const dateItem = gameState.limitedItems.date;
+      const eligibleIds = dateItem?.claims && dateItem.claims.length > 0
+        ? dateItem.claims.map(c => c.playerId)
+        : (dateItem?.claimedBy ? [dateItem.claimedBy] : []);
+      if (eligibleIds.length === 0 || !eligibleIds.includes(playerId)) {
+        const dateWinners = dateItem?.claims?.map(c => c.playerName).join(' en ')
+          || dateItem?.claimedByName
+          || 'de winnaar van de Date';
         if (callback) callback({
           success: false,
-          error: `🔒 Alleen ${dateWinnerName} (winnaar van de Date) kan gaan Trouwen!`
+          error: `🔒 Alleen ${dateWinners} (winnaar van de Date) kan gaan Trouwen!`
         });
         return;
       }
-    }
-
-    // Controleer of limited item al gekaapt is
-    if (isLimited && itemData.claimedBy && itemData.claimedBy !== playerId) {
-      if (callback) callback({
-        success: false,
-        error: `Helaas! Dit limited item is net gepakt door ${itemData.claimedByName}! OP = OP.`
-      });
-      return;
     }
 
     // Controleer of speler dit item al bezit
     if ((player.claimedItems || []).includes(itemId)) {
       if (callback) callback({ success: false, error: 'Je hebt dit item al geclaimd!' });
       return;
+    }
+
+    // Controleer of limited item al gekaapt is
+    if (isLimited) {
+      itemData.claims = itemData.claims || [];
+      if (itemData.claimedBy && itemData.claims.length === 0) {
+        itemData.claims.push({ playerId: itemData.claimedBy, playerName: itemData.claimedByName, claimedAt: itemData.claimedAt });
+      }
+      const maxClaims = itemData.maxClaims || gameState.limitedItemsMaxClaims || 1;
+      if (itemData.claims.length >= maxClaims && !itemData.claims.some(c => c.playerId === playerId)) {
+        const winners = itemData.claims.map(c => c.playerName).join(' en ');
+        if (callback) callback({
+          success: false,
+          error: `Helaas! Dit limited item is al geclaimd door ${winners}! OP = OP.`
+        });
+        return;
+      }
     }
 
     if (isCorrect) {
@@ -962,25 +1063,41 @@ io.on('connection', (socket) => {
       if (player.cooldowns) delete player.cooldowns[itemId];
 
       if (isLimited) {
-        // Markeer globaal als geclaimd
-        itemData.claimedBy = playerId;
-        itemData.claimedByName = player.name;
-        itemData.claimedAt = new Date().toISOString();
+        itemData.claims = itemData.claims || [];
+        const claimRecord = { playerId, playerName: player.name, claimedAt: new Date().toISOString() };
+        if (!itemData.claims.some(c => c.playerId === playerId)) {
+          itemData.claims.push(claimRecord);
+        }
+        itemData.claimedBy = itemData.claims[0].playerId;
+        itemData.claimedByName = itemData.claims.map(c => c.playerName).join(', ');
+        itemData.claimedAt = claimRecord.claimedAt;
+
+        const maxClaims = itemData.maxClaims || gameState.limitedItemsMaxClaims || 1;
+        const remaining = Math.max(0, maxClaims - itemData.claims.length);
 
         addActivityLog(`⭐ ${player.name} heeft het LIMITED item "${itemData.name}" geclaimd! (+${points} pt)`, 'claim', player.name);
 
-        // Broadcast aan ALLE andere spelers dat dit limited item op is!
+        const toastMsg = remaining === 0
+          ? `${player.name} heeft de laatste ${itemData.name} gepakt! (OP = OP)`
+          : `${player.name} heeft ${itemData.name} geclaimd! (Nog ${remaining} beschikbaar)`;
+
+        // Broadcast aan ALLE andere spelers dat dit limited item geclaimd is
         socket.broadcast.emit('item:limited_claimed', {
           playerId,
           playerName: player.name,
           itemId,
           itemName: itemData.name,
-          toastMessage: `${player.name} heeft de laatste ${itemData.name} gepakt!`
+          remaining,
+          toastMessage: toastMsg
         });
 
-        // Als dit het Job Interview is, ontgrendel Job Raise na 60 seconden exclusief voor deze winnaar
+        // Als dit het Job Interview is, ontgrendel Job Raise na 60 seconden
         if (itemId === 'job_interview') {
           if (gameState.limitedItems.job_raise) {
+            gameState.limitedItems.job_raise.eligiblePlayerIds = gameState.limitedItems.job_raise.eligiblePlayerIds || [];
+            if (!gameState.limitedItems.job_raise.eligiblePlayerIds.includes(playerId)) {
+              gameState.limitedItems.job_raise.eligiblePlayerIds.push(playerId);
+            }
             gameState.limitedItems.job_raise.eligiblePlayerId = playerId;
             gameState.limitedItems.job_raise.eligiblePlayerName = player.name;
           }
@@ -995,8 +1112,11 @@ io.on('connection', (socket) => {
             message: `Job Raise ontgrendelt over 1 minuut exclusief voor ${player.name}! Houd de kaart in de gaten.`
           });
         } else if (itemId === 'date') {
-          // Date behaald -> Trouwen ontgrendelt na 60 seconden exclusief voor deze winnaar
           if (gameState.limitedItems.trouwen) {
+            gameState.limitedItems.trouwen.eligiblePlayerIds = gameState.limitedItems.trouwen.eligiblePlayerIds || [];
+            if (!gameState.limitedItems.trouwen.eligiblePlayerIds.includes(playerId)) {
+              gameState.limitedItems.trouwen.eligiblePlayerIds.push(playerId);
+            }
             gameState.limitedItems.trouwen.eligiblePlayerId = playerId;
             gameState.limitedItems.trouwen.eligiblePlayerName = player.name;
           }

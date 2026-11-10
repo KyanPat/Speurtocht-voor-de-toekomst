@@ -73,8 +73,7 @@
           <span class="absolute -top-2 -right-2 bg-coral text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full shadow">Escape!</span>
         </div>
 
-        <h1 class="font-display text-2xl font-black text-stone-900 leading-tight">Doomscroll Escape</h1>
-        <p class="text-xs text-stone-600 mt-1 mb-5 font-medium">Ontsnap aan de schermvalstrikken!</p>
+        <h1 class="font-display text-2xl font-black text-stone-900 leading-tight mb-5">Doomscroll Escape</h1>
 
         <!-- Naam Invoerveld -->
         <div class="w-full text-left mb-4">
@@ -139,6 +138,15 @@
             <span class="material-symbols-outlined text-[14px]">logout</span>
             <span>Verlaat lobby / Kies andere naam</span>
           </button>
+        </div>
+
+        <!-- Gelimiteerde Items Info -->
+        <div class="w-full bg-amber-50 rounded-xl p-2.5 border border-amber-200/80 mb-3 text-left flex items-center justify-between text-xs">
+          <div class="flex items-center gap-1.5 text-amber-900 font-bold">
+            <span class="material-symbols-outlined text-amber-600 text-base">stars</span>
+            <span>Gelimiteerde Items:</span>
+          </div>
+          <span id="wait-limited-stock-badge" class="font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300 font-mono text-[11px]">1x per item</span>
         </div>
 
         <!-- Handige link naar Vindplekken (Geen digibord/qr link voor spelers) -->
@@ -222,12 +230,8 @@
     <!-- ============================================== -->
     <div id="screen-doomscroll-trap" class="hidden fixed inset-0 z-50 bg-[#000000] text-[#e2e2e8] flex flex-col min-h-screen overflow-hidden select-none">
       
-      <!-- Universele Telefoon Top Bar met Tijd en Escape Knop -->
-      <div class="fixed top-0 left-0 right-0 z-50 pt-safe px-3 pb-2 flex items-center justify-between pointer-events-none">
-        <button id="trap-exit-btn" type="button" class="pointer-events-auto flex items-center justify-center w-8 h-8 rounded-full bg-black/80 backdrop-blur-md text-white shadow-xl border border-white/20 active:scale-95 transition-all cursor-pointer" title="Terug">
-          <span class="material-symbols-outlined text-xl">arrow_back</span>
-        </button>
-
+      <!-- Universele Telefoon Top Bar met Tijd (Geen dubbele terugknop, apps hebben hun eigen terugknop) -->
+      <div class="fixed top-0 left-0 right-0 z-50 pt-safe px-3 pb-2 flex items-center justify-end pointer-events-none">
         <div class="flex items-center gap-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[10px] font-mono pointer-events-auto border border-white/10">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
           <span id="trap-phone-time">12:34</span>
@@ -289,25 +293,25 @@
     }
   </script>
 
-  <!-- Applicatie Scripts met Cache Buster (v24) -->
-  <script src="/js/itemsData.js?v=24"></script>
-  <script src="/js/soundEffects.js?v=24"></script>
-  <script src="/js/notifications.js?v=24"></script>
-  <script src="/js/playerApp.js?v=24"></script>
+  <!-- Applicatie Scripts met Cache Buster (v26) -->
+  <script src="/js/itemsData.js?v=26"></script>
+  <script src="/js/soundEffects.js?v=26"></script>
+  <script src="/js/notifications.js?v=26"></script>
+  <script src="/js/playerApp.js?v=26"></script>
 
   <!-- PWA Service Worker registratie met forceer-update -->
   <script>
     if ('caches' in window) {
       caches.keys().then(keys => {
         keys.forEach(k => {
-          if (k !== 'doomscroll-escape-v24') caches.delete(k);
+          if (k !== 'doomscroll-escape-v26') caches.delete(k);
         });
       });
     }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=24')
+        navigator.serviceWorker.register('/sw.js?v=26')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);

@@ -163,17 +163,28 @@
 
         <!-- Locaties Overzicht Kaart (Lobby) -->
         <div class="w-full max-w-2xl bg-stone-900/60 rounded-2xl p-4 border border-stone-800 mb-6 text-left">
-          <div class="flex items-center justify-between mb-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-emerald-400 text-base">pin_drop</span>
-              <span class="text-xs font-bold text-stone-300 uppercase tracking-wider">Fysieke Vindplekken van de 8
-                Items</span>
+              <span class="text-xs font-bold text-stone-300 uppercase tracking-wider">Fysieke Vindplekken van de 8 Items</span>
             </div>
-            <button id="btn-lobby-quick-edit-locations" type="button"
-              class="text-xs font-semibold text-emerald-400 hover:text-emerald-300 underline flex items-center gap-1 cursor-pointer">
-              <span class="material-symbols-outlined text-[14px]">edit</span>
-              <span>Locaties Wijzigen</span>
-            </button>
+
+            <!-- Snelle toggle voor Limited Items Aantal (1 of 2) -->
+            <div class="flex items-center gap-2 bg-stone-950/80 px-2.5 py-1 rounded-xl border border-stone-800">
+              <span class="text-[11px] font-semibold text-amber-300 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm text-amber-400">stars</span>
+                <span>Limited voorraad:</span>
+              </span>
+              <div class="inline-flex rounded-lg bg-stone-900 p-0.5 border border-stone-700 text-xs">
+                <button type="button" id="btn-quick-limited-1" class="px-2 py-0.5 rounded-md font-bold transition text-amber-300 bg-amber-950/80 border border-amber-600/50 cursor-pointer" title="Elk limited item kan 1x geclaimd worden">1x</button>
+                <button type="button" id="btn-quick-limited-2" class="px-2 py-0.5 rounded-md font-bold transition text-stone-400 hover:text-white cursor-pointer" title="Elk limited item kan 2x geclaimd worden">2x</button>
+              </div>
+              <button id="btn-lobby-quick-edit-locations" type="button"
+                class="text-xs font-semibold text-emerald-400 hover:text-emerald-300 underline flex items-center gap-1 cursor-pointer ml-1">
+                <span class="material-symbols-outlined text-[14px]">edit</span>
+                <span>Wijzigen</span>
+              </button>
+            </div>
           </div>
           <div id="lobby-locations-chips" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
             <!-- Dynamisch gevuld via JavaScript -->
@@ -522,11 +533,10 @@
 
       <!-- Inhoud (Scrollbaar) -->
       <div class="p-6 overflow-y-auto space-y-6 flex-1 text-left">
-        <!-- Algemene Opties (Tijd & Link) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-stone-900/70 p-4 rounded-2xl border border-stone-800">
+        <!-- Algemene Opties (Tijd, Limited Items & Link) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-stone-900/70 p-4 rounded-2xl border border-stone-800">
           <div>
-            <label class="block text-xs font-bold text-stone-300 uppercase tracking-wider mb-1.5">Speelduur
-              (Minuten)</label>
+            <label class="block text-xs font-bold text-stone-300 uppercase tracking-wider mb-1.5">Speelduur (Minuten)</label>
             <select id="setting-game-duration"
               class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
               <option value="10">10 Minuten (Snel spel)</option>
@@ -538,8 +548,21 @@
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-stone-300 uppercase tracking-wider mb-1.5">Directe Deelnemer
-              Link</label>
+            <label class="block text-xs font-bold text-amber-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <span class="material-symbols-outlined text-sm">stars</span>
+              <span>Limited Item Voorraad</span>
+            </label>
+            <select id="setting-limited-claims"
+              class="w-full bg-stone-950 border border-amber-600/50 rounded-xl px-3.5 py-2.5 text-sm font-bold text-amber-300 focus:outline-none focus:border-amber-400">
+              <option value="1">1x per item (1 winnaar)</option>
+              <option value="2">2x per item (2 winnaars)</option>
+              <option value="3">3x per item (3 winnaars)</option>
+            </select>
+            <p class="text-[10px] text-stone-500 mt-1">Aantal claims per limited item (Date, Job Interview, etc.).</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-stone-300 uppercase tracking-wider mb-1.5">Directe Deelnemer Link</label>
             <div class="flex items-center gap-2">
               <input type="text" id="setting-join-url" readonly
                 class="w-full bg-stone-950 border border-stone-700 rounded-xl px-3 py-2 text-xs font-mono text-emerald-400 select-all focus:outline-none">
@@ -548,7 +571,7 @@
                 Kopieer
               </button>
             </div>
-            <p class="text-[10px] text-stone-500 mt-1">Leerlingen verbinden automatisch op hetzelfde wifi-netwerk.</p>
+            <p class="text-[10px] text-stone-500 mt-1">Leerlingen verbinden via hetzelfde wifi-netwerk.</p>
           </div>
         </div>
 
@@ -625,11 +648,11 @@
     </div>
   </div>
 
-  <!-- Scripts -->
+  <!-- Scripts (v26) -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/itemsData.js?v=17"></script>
-  <script src="/js/soundEffects.js?v=17"></script>
-  <script src="/js/digibordApp.js?v=17"></script>
+  <script src="/js/itemsData.js?v=26"></script>
+  <script src="/js/soundEffects.js?v=26"></script>
+  <script src="/js/digibordApp.js?v=26"></script>
 </body>
 
 </html>

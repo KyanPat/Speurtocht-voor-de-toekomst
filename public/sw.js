@@ -1,5 +1,5 @@
-// Service Worker voor Doomscroll Escape PWA (v24 - Infinite API Reels & Sound, Modal Navigation Fix)
-const CACHE_NAME = 'doomscroll-escape-v24';
+// Service Worker voor Doomscroll Escape PWA (v26 - Clean Modals, Geen Captcha/Speurtocht teksten, 1x/2x Limited Stock)
+const CACHE_NAME = 'doomscroll-escape-v26';
 
 // Essentiële core bestanden voor offline werking en data-besparing
 const CORE_ASSETS = [
@@ -8,10 +8,10 @@ const CORE_ASSETS = [
   '/digibord.html',
   '/manifest.json',
   '/css/app.css',
-  '/js/itemsData.js?v=24',
-  '/js/playerApp.js?v=24',
-  '/js/soundEffects.js?v=24',
-  '/js/notifications.js?v=24',
+  '/js/itemsData.js?v=26',
+  '/js/playerApp.js?v=26',
+  '/js/soundEffects.js?v=26',
+  '/js/notifications.js?v=26',
   '/assets/sounds/whatsapp.wav',
   '/assets/sounds/snapchat.wav',
   '/assets/sounds/instagram.wav',

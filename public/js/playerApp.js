@@ -141,6 +141,13 @@
       state.timeRemaining = data.timeRemaining;
       state.limitedItems = data.limitedItems;
       state.generalItems = data.generalItems;
+      state.limitedItemsMaxClaims = data.limitedItemsMaxClaims || data.gameState?.limitedItemsMaxClaims || 1;
+
+      // Update lobby wait badge als voorraad wijzigt
+      const waitStockBadge = document.getElementById('wait-limited-stock-badge');
+      if (waitStockBadge) {
+        waitStockBadge.textContent = `${state.limitedItemsMaxClaims}x per item`;
+      }
 
       syncItemsData(data.generalItems, data.limitedItems);
 
@@ -605,28 +612,41 @@
 
       const isClaimedByMe = (state.claimedItems || []).includes(item.id);
       const limitedServerInfo = state.limitedItems ? state.limitedItems[item.id] : null;
-      const isClaimedByOther = item.isLimited && limitedServerInfo && limitedServerInfo.claimedBy && limitedServerInfo.claimedBy !== state.playerId;
+      const maxClaims = limitedServerInfo?.maxClaims || state.limitedItemsMaxClaims || 1;
+      const claimsList = Array.isArray(limitedServerInfo?.claims)
+        ? limitedServerInfo.claims
+        : (limitedServerInfo?.claimedBy ? [{ playerId: limitedServerInfo.claimedBy, playerName: limitedServerInfo.claimedByName }] : []);
+      const isDepleted = item.isLimited && claimsList.length >= maxClaims && !claimsList.some(c => c.playerId === state.playerId);
+      const isClaimedByOther = isDepleted;
       const isLocked = (item.id === 'job_raise' || item.id === 'trouwen') && (!limitedServerInfo || limitedServerInfo.isLocked);
       const activeCooldown = (state.cooldowns || {})[item.id] || 0;
 
-      // Exclusiviteit follow-ups:
-      const intWinnerId = state.limitedItems?.job_interview?.claimedBy;
-      const intWinnerName = state.limitedItems?.job_interview?.claimedByName || 'Ander';
+      // Exclusiviteit follow-ups (geschikt voor 1x of meerdere claims per limited item):
+      const intEligible = Array.isArray(state.limitedItems?.job_interview?.eligiblePlayerIds)
+        ? state.limitedItems.job_interview.eligiblePlayerIds
+        : (state.limitedItems?.job_interview?.claims ? state.limitedItems.job_interview.claims.map(c => c.playerId) : (state.limitedItems?.job_interview?.claimedBy ? [state.limitedItems.job_interview.claimedBy] : []));
+      const intWinnerNames = Array.isArray(state.limitedItems?.job_interview?.claims)
+        ? state.limitedItems.job_interview.claims.map(c => c.playerName).filter(Boolean).join(', ')
+        : (state.limitedItems?.job_interview?.claimedByName || 'Interview-winnaar');
       const isJobRaiseLockedForMe = (item.id === 'job_raise') && (
-        !intWinnerId || (intWinnerId !== state.playerId) || (intWinnerId === state.playerId && isLocked)
+        intEligible.length === 0 || !intEligible.includes(state.playerId) || (intEligible.includes(state.playerId) && isLocked)
       );
 
-      const dateWinnerId = state.limitedItems?.date?.claimedBy;
-      const dateWinnerName = state.limitedItems?.date?.claimedByName || 'Ander';
+      const dateEligible = Array.isArray(state.limitedItems?.date?.eligiblePlayerIds)
+        ? state.limitedItems.date.eligiblePlayerIds
+        : (state.limitedItems?.date?.claims ? state.limitedItems.date.claims.map(c => c.playerId) : (state.limitedItems?.date?.claimedBy ? [state.limitedItems.date.claimedBy] : []));
+      const dateWinnerNames = Array.isArray(state.limitedItems?.date?.claims)
+        ? state.limitedItems.date.claims.map(c => c.playerName).filter(Boolean).join(', ')
+        : (state.limitedItems?.date?.claimedByName || 'Date-winnaar');
       const isTrouwenLockedForMe = (item.id === 'trouwen') && (
-        !dateWinnerId || (dateWinnerId !== state.playerId) || (dateWinnerId === state.playerId && isLocked)
+        dateEligible.length === 0 || !dateEligible.includes(state.playerId) || (dateEligible.includes(state.playerId) && isLocked)
       );
 
-      // Locatie onthulling check
+      // Locatie onthulling check (geen Captcha tekst!)
       const isLocRevealed = !item.isLimited || !!(state.revealedLocations && state.revealedLocations[item.id]);
       const displayLocation = isLocRevealed
         ? `📍 ${item.secretLocation || item.location}`
-        : '❓ Verborgen (Los Captcha op)';
+        : '❓ Verborgen (Tik om te onthullen)';
 
       const wrap = document.createElement('div');
       wrap.className = itemConfig.align === 'left' ? 'flex justify-start pl-2' : 'flex justify-end pr-2';
@@ -646,15 +666,20 @@
       if (isClaimedByMe) {
         badgeHtml = `<span class="absolute -top-2 -right-2 bg-emerald-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">✓ Behaald!</span>`;
       } else if (isClaimedByOther) {
-        badgeHtml = `<span class="absolute -top-2 -right-2 bg-rose-600 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shadow">OP = OP • ${limitedServerInfo.claimedByName || 'Ander'}</span>`;
-      } else if (item.id === 'job_raise' && intWinnerId && intWinnerId !== state.playerId) {
-        badgeHtml = `<span class="absolute -top-2 -right-2 bg-stone-700 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shadow">🔒 Alleen voor ${intWinnerName}</span>`;
-      } else if (item.id === 'trouwen' && dateWinnerId && dateWinnerId !== state.playerId) {
-        badgeHtml = `<span class="absolute -top-2 -right-2 bg-stone-700 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shadow">🔒 Alleen voor ${dateWinnerName}</span>`;
+        badgeHtml = `<span class="absolute -top-2 -right-2 bg-rose-600 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shadow">OP = OP (${claimsList.length}/${maxClaims})</span>`;
+      } else if (item.id === 'job_raise' && intEligible.length > 0 && !intEligible.includes(state.playerId)) {
+        badgeHtml = `<span class="absolute -top-2 -right-2 bg-stone-700 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shadow">🔒 Alleen voor ${intWinnerNames}</span>`;
+      } else if (item.id === 'trouwen' && dateEligible.length > 0 && !dateEligible.includes(state.playerId)) {
+        badgeHtml = `<span class="absolute -top-2 -right-2 bg-stone-700 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shadow">🔒 Alleen voor ${dateWinnerNames}</span>`;
       } else if (isLocked) {
         badgeHtml = `<span class="absolute -top-2 -right-2 bg-stone-700 text-white text-[9px] font-bold uppercase px-2 py-0.5 rounded shadow">🔒 Vergrendeld</span>`;
       } else if (item.isLimited) {
-        badgeHtml = `<span class="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-amber-700 text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded shadow">Limited</span>`;
+        const remainingClaims = Math.max(0, maxClaims - claimsList.length);
+        if (claimsList.length > 0 && remainingClaims > 0) {
+          badgeHtml = `<span class="absolute -top-2 -right-2 bg-amber-600 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shadow">Nog ${remainingClaims} over!</span>`;
+        } else {
+          badgeHtml = `<span class="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-amber-700 text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded shadow">Limited (${maxClaims}x)</span>`;
+        }
       }
 
       let innerContentHtml = '';
@@ -668,22 +693,22 @@
             <p class="text-[7px] text-rose-700 font-medium mt-1">Fout antwoord! Tik voor opties</p>
           </div>
         `;
-      } else if (item.id === 'job_raise' && intWinnerId && intWinnerId !== state.playerId) {
+      } else if (item.id === 'job_raise' && intEligible.length > 0 && !intEligible.includes(state.playerId)) {
         innerContentHtml = `
           <div class="w-full min-h-[76px] bg-stone-100 rounded-sm mb-2 p-2 flex flex-col items-center justify-center border border-stone-300 text-center">
             <div class="flex items-center gap-1 text-xs font-bold text-stone-700 mb-0.5">
               <span>🔒</span> ${item.name}
             </div>
-            <p class="text-[8px] text-stone-500 leading-tight">Exclusief voor ${intWinnerName}</p>
+            <p class="text-[8px] text-stone-500 leading-tight">Exclusief voor ${intWinnerNames}</p>
           </div>
         `;
-      } else if (item.id === 'trouwen' && dateWinnerId && dateWinnerId !== state.playerId) {
+      } else if (item.id === 'trouwen' && dateEligible.length > 0 && !dateEligible.includes(state.playerId)) {
         innerContentHtml = `
           <div class="w-full min-h-[76px] bg-stone-100 rounded-sm mb-2 p-2 flex flex-col items-center justify-center border border-stone-300 text-center">
             <div class="flex items-center gap-1 text-xs font-bold text-stone-700 mb-0.5">
               <span>🔒</span> ${item.name}
             </div>
-            <p class="text-[8px] text-stone-500 leading-tight">Exclusief voor ${dateWinnerName}</p>
+            <p class="text-[8px] text-stone-500 leading-tight">Exclusief voor ${dateWinnerNames}</p>
           </div>
         `;
       } else if (isLocked) {
@@ -697,11 +722,12 @@
           </div>
         `;
       } else {
+        const stockLabel = maxClaims > 1 ? `${maxClaims} Beschikbaar!` : '1 Beschikbaar!';
         innerContentHtml = `
           <div class="w-full min-h-[76px] ${item.isLimited ? 'bg-amber-50/70 border-amber-200/80' : 'bg-stone-50 border-stone-200/80'} rounded-sm mb-2 p-2 flex flex-col items-center justify-center border text-center">
             <div class="flex items-center gap-1 mb-0.5">
               <span class="text-xs font-bold text-stone-900">${item.name}</span>
-              ${item.isLimited ? '<span class="text-[8px] bg-amber-200 text-amber-950 font-bold px-1 rounded">1 Beschikbaar!</span>' : ''}
+              ${item.isLimited ? `<span class="text-[8px] bg-amber-200 text-amber-950 font-bold px-1 rounded">${stockLabel}</span>` : ''}
             </div>
             <p class="text-[10px] text-stone-600 leading-tight">${item.tag}</p>
           </div>
@@ -713,16 +739,16 @@
         clickActionText = 'Reeds behaald';
       } else if (isClaimedByOther) {
         clickActionText = 'Niet meer beschikbaar';
-      } else if (item.id === 'job_raise' && intWinnerId && intWinnerId !== state.playerId) {
-        clickActionText = `Alleen voor ${intWinnerName}`;
-      } else if (item.id === 'trouwen' && dateWinnerId && dateWinnerId !== state.playerId) {
-        clickActionText = `Alleen voor ${dateWinnerName}`;
+      } else if (item.id === 'job_raise' && intEligible.length > 0 && !intEligible.includes(state.playerId)) {
+        clickActionText = `Alleen voor ${intWinnerNames}`;
+      } else if (item.id === 'trouwen' && dateEligible.length > 0 && !dateEligible.includes(state.playerId)) {
+        clickActionText = `Alleen voor ${dateWinnerNames}`;
       } else if (isLocked) {
         clickActionText = 'Timer start na vorig item';
       } else if (activeCooldown > 0) {
         clickActionText = 'Tik voor wachttijd';
       } else if (item.isLimited && !isLocRevealed) {
-        clickActionText = 'Tik voor Captcha taak';
+        clickActionText = 'Tik om locatie te onthullen';
       } else {
         clickActionText = 'Tik om te openen';
       }
@@ -864,21 +890,27 @@
     }
 
     const limitedInfo = state.limitedItems ? state.limitedItems[item.id] : null;
-    if (item.isLimited && limitedInfo && limitedInfo.claimedBy && limitedInfo.claimedBy !== state.playerId) {
-      showToast(`Helaas! ${item.name} is al gepakt door ${limitedInfo.claimedByName}. OP = OP!`, 'error');
+    const maxClaims = limitedInfo?.maxClaims || state.limitedItemsMaxClaims || 1;
+    const claimsList = Array.isArray(limitedInfo?.claims)
+      ? limitedInfo.claims
+      : (limitedInfo?.claimedBy ? [{ playerId: limitedInfo.claimedBy, playerName: limitedInfo.claimedByName }] : []);
+
+    if (item.isLimited && claimsList.length >= maxClaims && !claimsList.some(c => c.playerId === state.playerId)) {
+      showToast(`Helaas! ${item.name} is al gepakt (${claimsList.length}/${maxClaims}). OP = OP!`, 'error');
       return;
     }
 
-    // Exclusiviteit follow-ups:
+    // Exclusiviteit follow-ups (geschikt voor 1x of meerdere claims per limited item):
     if (item.id === 'job_raise') {
-      const intWinner = state.limitedItems?.job_interview?.claimedBy;
-      const intWinnerName = state.limitedItems?.job_interview?.claimedByName || 'de winnaar van het sollicitatiegesprek';
-      if (!intWinner) {
+      const intEligible = Array.isArray(state.limitedItems?.job_interview?.eligiblePlayerIds)
+        ? state.limitedItems.job_interview.eligiblePlayerIds
+        : (state.limitedItems?.job_interview?.claims ? state.limitedItems.job_interview.claims.map(c => c.playerId) : (state.limitedItems?.job_interview?.claimedBy ? [state.limitedItems.job_interview.claimedBy] : []));
+      if (intEligible.length === 0) {
         showToast('🔒 Job Raise is vergrendeld. Er moet eerst iemand slagen voor het Job Interview!');
         return;
       }
-      if (intWinner !== state.playerId) {
-        showToast(`🔒 Exclusief item: alleen ${intWinnerName} (Interview winnaar) kan de Job Raise claimen!`, 'error');
+      if (!intEligible.includes(state.playerId)) {
+        showToast(`🔒 Exclusief item: alleen de winnaars van het Job Interview kunnen de Job Raise claimen!`, 'error');
         return;
       }
       if (limitedInfo && limitedInfo.isLocked) {
@@ -888,14 +920,15 @@
     }
 
     if (item.id === 'trouwen') {
-      const dateWinner = state.limitedItems?.date?.claimedBy;
-      const dateWinnerName = state.limitedItems?.date?.claimedByName || 'de winnaar van de Date';
-      if (!dateWinner) {
+      const dateEligible = Array.isArray(state.limitedItems?.date?.eligiblePlayerIds)
+        ? state.limitedItems.date.eligiblePlayerIds
+        : (state.limitedItems?.date?.claims ? state.limitedItems.date.claims.map(c => c.playerId) : (state.limitedItems?.date?.claimedBy ? [state.limitedItems.date.claimedBy] : []));
+      if (dateEligible.length === 0) {
         showToast('🔒 Trouwen is vergrendeld. Er moet eerst iemand slagen voor de Date!');
         return;
       }
-      if (dateWinner !== state.playerId) {
-        showToast(`🔒 Exclusief item: alleen ${dateWinnerName} (Date winnaar) kan gaan Trouwen!`, 'error');
+      if (!dateEligible.includes(state.playerId)) {
+        showToast(`🔒 Exclusief item: alleen de winnaars van de Date kunnen gaan Trouwen!`, 'error');
         return;
       }
       if (limitedInfo && limitedInfo.isLocked) {
@@ -2763,17 +2796,25 @@
       console.warn('API error, using local infinite generator:', e);
     }
 
-    // Lokale generator indien offline
+    // Lokale generator indien offline (afwisselend video en unieke Picsum foto reels)
     const localReels = [];
     for (let idx = 0; idx < limit; idx++) {
       const i = cursor + idx;
       const v = FEED_OPEN_VIDEOS[i % FEED_OPEN_VIDEOS.length];
+      const isImageReel = (i % 3 === 2);
+      const seed = `reel_${platform}_${i}_${(i * 3571 + 104729) % 999999}`;
+      const url = isImageReel ? `https://picsum.photos/seed/${seed}/1080/1920` : v.url;
+      const mediaType = isImageReel ? 'image' : 'video';
+      const audioUrl = v.audioUrl || v.url;
+
       localReels.push({
         id: `${platform}_reel_${i}`,
         index: i,
-        url: v.url,
+        mediaType,
+        url,
+        audioUrl,
         sound: v.sound || 'Origineel Geluid - Trending Beat 🎵',
-        credits: v.credits || 'Open Media Hub',
+        credits: isImageReel ? 'Picsum Photos CC0' : (v.credits || 'Open Media Hub'),
         user: v.user || `creator_${i}`,
         avatar: v.avatar || getRandomAvatarUrl(),
         caption: v.caption || 'Kijk deze video! 😂 #fyp #viral',
@@ -2790,11 +2831,19 @@
     if (!igUserLikes[reelId]) igUserLikes[reelId] = { count: reel.likes || 45200, liked: false };
     if (!igUserDislikes[reelId]) igUserDislikes[reelId] = { count: reel.dislikes || 320, disliked: false };
 
+    const isImage = (reel.mediaType === 'image');
+    const audioSrc = reel.audioUrl || reel.url || '/assets/videos/friday_chill.mp4';
+
     return `
       <div class="snap-feed-item relative w-full h-full shrink-0 flex flex-col justify-between overflow-hidden bg-black select-none" data-reel-id="${reelId}">
-        <!-- Video Achtergrond -->
+        <!-- Media Achtergrond (Video of Unieke Foto Reel met Looping Audio Element) -->
         <div class="absolute inset-0 bg-black">
-          <video src="${reel.url}" class="reel-video-el w-full h-full object-cover" loop playsinline preload="metadata"></video>
+          ${isImage ? `
+            <img src="${reel.url}" alt="${reel.caption || 'Reel media'}" class="w-full h-full object-cover" loading="lazy">
+            <video src="${audioSrc}" class="reel-video-el hidden" loop playsinline preload="metadata"></video>
+          ` : `
+            <video src="${reel.url}" class="reel-video-el w-full h-full object-cover" loop playsinline preload="metadata"></video>
+          `}
           <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/80 pointer-events-none"></div>
         </div>
 
@@ -4093,6 +4142,9 @@
   function closeModal() {
     modalOverlay.classList.add('hidden');
     state.activeModal = null;
+    if (!state.inDoomscroll && state.gameStatus === 'PLAYING') {
+      showScreen('gameplay');
+    }
   }
   window.closeModal = closeModal;
 
