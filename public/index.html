@@ -103,7 +103,7 @@
 
         <!-- Handige shortcut naar Digibord voor testen -->
         <a href="/digibord" target="_blank" class="mt-4 text-[11px] text-stone-500 hover:text-stone-800 underline flex items-center justify-center gap-1">
-          <span class="material-symbols-outlined text-[14px]">tv</span> Open Digibord scherm (voor docent)
+          <span class="material-symbols-outlined text-[14px]">tv</span> Open Digibord scherm
         </a>
       </div>
     </section>
@@ -126,7 +126,13 @@
         </div>
 
         <h2 class="font-display text-xl font-bold text-stone-900">Welkom in de lobby, <span id="wait-player-name" class="text-primary">Speler</span>!</h2>
-        <p class="text-xs text-stone-600 mt-1 mb-4">De spelleider start het spel zo dadelijk op het Digibord.</p>
+        <p class="text-xs text-stone-600 mt-1 mb-3 font-medium">Het spel start over een dadelijk moment.</p>
+
+        <!-- Direct Spel Starten Knop -->
+        <button id="btn-lobby-start-direct" type="button" class="w-full py-2.5 px-4 mb-4 rounded-xl bg-primary hover:bg-emerald-700 text-white font-bold text-xs shadow-md active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <span class="material-symbols-outlined text-base">play_arrow</span>
+          <span>Start Spel Direct</span>
+        </button>
 
         <!-- Spelers in Lobby -->
         <div class="w-full bg-stone-50 rounded-xl p-3 border border-stone-200 mb-4 text-left">
@@ -292,24 +298,24 @@
   <script src="/socket.io/socket.io.js"></script>
 
   <!-- Applicatie Scripts met Cache Buster -->
-  <script src="/js/itemsData.js?v=14"></script>
-  <script src="/js/soundEffects.js?v=14"></script>
-  <script src="/js/notifications.js?v=14"></script>
-  <script src="/js/playerApp.js?v=14"></script>
+  <script src="/js/itemsData.js?v=16"></script>
+  <script src="/js/soundEffects.js?v=16"></script>
+  <script src="/js/notifications.js?v=16"></script>
+  <script src="/js/playerApp.js?v=16"></script>
 
   <!-- PWA Service Worker registratie met forceer-update -->
   <script>
     if ('caches' in window) {
       caches.keys().then(keys => {
         keys.forEach(k => {
-          if (k !== 'doomscroll-escape-v14') caches.delete(k);
+          if (k !== 'doomscroll-escape-v16') caches.delete(k);
         });
       });
     }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=14')
+        navigator.serviceWorker.register('/sw.js?v=16')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);

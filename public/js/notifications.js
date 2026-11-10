@@ -28,7 +28,14 @@ class NotificationManager {
   startAmbientDistractions() {
     if (this.isActive) return;
     this.isActive = true;
-    this.scheduleNext();
+    // Eerste notificatie start vlot na 15 seconden
+    const firstDelay = (15 + Math.random() * 5) * 1000;
+    this.timer = setTimeout(() => {
+      if (this.isActive) {
+        this.triggerRandomDistraction();
+        this.scheduleNext();
+      }
+    }, firstDelay);
   }
 
   stopAmbientDistractions() {
@@ -41,8 +48,8 @@ class NotificationManager {
 
   scheduleNext() {
     if (!this.isActive) return;
-    // Willekeurig tussen 30 en 90 seconden
-    const delay = (30 + Math.random() * 60) * 1000;
+    // Willekeurig tussen 15 en 30 seconden door de loop van de game
+    const delay = (15 + Math.random() * 15) * 1000;
     this.timer = setTimeout(() => {
       if (this.isActive) {
         this.triggerRandomDistraction();

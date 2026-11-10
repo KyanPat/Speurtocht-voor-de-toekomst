@@ -98,14 +98,25 @@ const ITEMS_DATA = {
   job_interview: {
     id: 'job_interview',
     name: 'Job Interview',
-    location: 'Kantoor 302',
-    code: '4343',
+    location: '❓ Verborgen (Los taak op)',
+    secretLocation: 'Kantoor 302',
+    code: '2413',
     points: 1,
     isLimited: true,
     icon: 'handshake',
     category: 'Limited Item',
     tag: 'Sollicitatiegesprek • 1x Wereldwijd',
     hintText: 'Vind de geheime envelop op de deur van Kantoor 302.',
+    locationTask: {
+      riddle: 'Op de 3e verdieping zit de loopbaancoach in een rustig spreekkantoor. Welk lokaalnummer zoek je voor je sollicitatiegesprek?',
+      options: [
+        { id: 'loc_a', text: 'Kantoor 302', isCorrect: true, letter: 'A' },
+        { id: 'loc_b', text: 'Lokaal 101', isCorrect: false, letter: 'B' },
+        { id: 'loc_c', text: 'Schoonmaakkast B', isCorrect: false, letter: 'C' }
+      ],
+      revealedLocation: 'Kantoor 302',
+      revealHint: 'Ren nu snel naar Kantoor 302 (3e verdieping) en zoek de 4-cijferige fysieke code!'
+    },
     questionType: 'multiple_choice',
     speaker: 'Vraag van de werkgever:',
     question: '"Waarom denk je dat je geschikt bent voor deze positie?"',
@@ -136,15 +147,26 @@ const ITEMS_DATA = {
   job_raise: {
     id: 'job_raise',
     name: 'Job Raise',
-    location: 'Kantoor 302',
+    location: '❓ Verborgen (Los taak op)',
+    secretLocation: 'Directiekamer 401',
     code: '1243',
     points: 1,
     isLimited: true,
     isLocked: true,
     icon: 'trending_up',
     category: 'Limited Item',
-    tag: 'Salarisverhoging • Ontgrendelt na interview',
-    hintText: 'Ontgrendelt 1 minuut na het sollicitatiegesprek.',
+    tag: 'Salarisverhoging • Alleen voor Interview winnaar',
+    hintText: 'Ontgrendelt 1 minuut na het sollicitatiegesprek (exclusief voor de winnaar).',
+    locationTask: {
+      riddle: 'Waar op de bovenste etage zit de directie om salarisverhogingen en promoties te bespreken?',
+      options: [
+        { id: 'loc_a', text: 'Directiekamer 401', isCorrect: true, letter: 'A' },
+        { id: 'loc_b', text: 'Kantine Keuken', isCorrect: false, letter: 'B' },
+        { id: 'loc_c', text: 'Magazijn Kelder', isCorrect: false, letter: 'C' }
+      ],
+      revealedLocation: 'Directiekamer 401',
+      revealHint: 'Ren nu naar Directiekamer 401 (4e verdieping) en voer de fysieke code in!'
+    },
     questionType: 'multiple_choice',
     speaker: 'Vraag van de directie:',
     question: '"Je ontvangt onverwacht een flinke salarisverhoging! Wat doe je?"',
@@ -159,7 +181,7 @@ const ITEMS_DATA = {
       },
       {
         id: 'opt_b',
-        text: 'Meteen flink zuipen en feesten tot in de vroege ochtend.',
+        text: 'Meteen flink feesten tot in de vroege ochtend.',
         isCorrect: false,
         letter: 'B'
       },
@@ -175,7 +197,8 @@ const ITEMS_DATA = {
   date: {
     id: 'date',
     name: 'Date',
-    location: 'Kantine Terras',
+    location: '❓ Verborgen (Los taak op)',
+    secretLocation: 'Kantine Terras',
     code: '3442',
     points: 1,
     isLimited: true,
@@ -183,6 +206,16 @@ const ITEMS_DATA = {
     category: 'Limited Item',
     tag: 'Eerste Date • 1x Wereldwijd',
     hintText: 'Zoek bij tafel 7 op het terras van de kantine naar de 4-cijferige code.',
+    locationTask: {
+      riddle: 'Waar verzamelen mensen zich buiten in de zon om samen wat te drinken, te eten en gezellig af te spreken?',
+      options: [
+        { id: 'loc_a', text: 'Kantine Terras', isCorrect: true, letter: 'A' },
+        { id: 'loc_b', text: 'Fietsenstalling Noord', isCorrect: false, letter: 'B' },
+        { id: 'loc_c', text: 'Kopieerhok 01', isCorrect: false, letter: 'C' }
+      ],
+      revealedLocation: 'Kantine Terras',
+      revealHint: 'Ren direct naar het Kantine Terras, vind de fysieke code bij tafel 7 en claim je date!'
+    },
     questionType: 'multiple_choice',
     speaker: 'Dilemma voor je date:',
     question: 'Je hebt een spannende eerste date op het kantine terras. Welk cadeau neem je mee?',
@@ -219,19 +252,30 @@ const ITEMS_DATA = {
   trouwen: {
     id: 'trouwen',
     name: 'Trouwen',
-    location: 'Trouwzaal / Aula',
+    location: '❓ Verborgen (Los taak op)',
+    secretLocation: 'Trouwzaal / Aula',
     code: '3443',
     points: 1,
     isLimited: true,
     isLocked: true,
     icon: 'diversity_1',
     category: 'Limited Item',
-    tag: 'Huwelijk & Toekomst • Ontgrendelt na Date',
-    hintText: 'Ontgrendelt 1 minuut na het voltooien van de Date.',
+    tag: 'Huwelijk & Toekomst • Alleen voor Date winnaar',
+    hintText: 'Ontgrendelt 1 minuut na de Date (exclusief voor de winnaar).',
+    locationTask: {
+      riddle: 'Waar in het hoofdgebouw verzamelen grote groepen voor officiële vieringen, ceremonies en plechtigheden?',
+      options: [
+        { id: 'loc_a', text: 'Trouwzaal / Aula', isCorrect: true, letter: 'A' },
+        { id: 'loc_b', text: 'Gymzaal Kleedkamer', isCorrect: false, letter: 'B' },
+        { id: 'loc_c', text: 'Meterkast B2', isCorrect: false, letter: 'C' }
+      ],
+      revealedLocation: 'Trouwzaal / Aula',
+      revealHint: 'Ren nu naar de Trouwzaal / Aula, vind de 4-cijferige code en stap in het huwelijksbootje!'
+    },
     questionType: 'multiple_choice',
     speaker: 'Grote levenskeuze:',
     question: 'Wat is het allerbelangrijkste fundament voor een gelukkig en langdurig huwelijk?',
-    subtext: 'Wees snel: slechts 1 speler kan de huwelijksboot betreden!',
+    subtext: 'Wees snel: alleen de Date winnaar kan de huwelijksboot betreden!',
     imageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80',
     options: [
       {
@@ -373,14 +417,15 @@ const OPENSOURCE_MEDIA_CATALOG = [
     creatorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
     verified: true,
     followers: '3.4M volgers',
-    caption: 'Dit street food vakmanschap is zó satisfying om naar te kijken 🤤✨ Wok op hoog vuur! #fyp #satisfying #streetfood #viral #craft',
-    sound: 'Origineel Geluid - Sizzling Wok Studio (Loop)',
+    caption: 'Dit vakmanschap is zó satisfying om naar te kijken 🤤✨ Prachtige actie! #fyp #satisfying #viral #craft',
+    sound: 'Origineel Geluid - Dynamic Beats & Ambient Sound',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     bgImage: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
     likes: 142800,
     dislikes: 95,
     comments: '1.4K',
     shares: '8.9K',
-    credits: 'Bron: Wikimedia Commons / Pexels Open Video • Licentie: Creative Commons (CC-BY 4.0)'
+    credits: 'Bron: Google Open Media Sample • Licentie: Creative Commons (CC-BY 3.0)'
   },
   {
     id: 'os_media_8',
@@ -389,29 +434,31 @@ const OPENSOURCE_MEDIA_CATALOG = [
     creatorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80',
     verified: true,
     followers: '1.8M volgers',
-    caption: 'Zwaan latte art gieten in een fluweelzachte havermelk cappuccino ☕🦢 Perfecte microschuim! #latteart #coffee #barista #satisfying #ochtend',
+    caption: 'Even ontsnappen naar de mooiste plekken ter wereld ☕🌿 Zet je geluid even aan! #nature #vibes #satisfying #relax',
     sound: 'Lofi Café Ambience - Gentle Espresso Beats',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
     bgImage: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80',
     likes: 294000,
     dislikes: 180,
     comments: '2.8K',
     shares: '15.6K',
-    credits: 'Bron: Pexels Open Coffee Media • Licentie: CC0 Public Domain'
+    credits: 'Bron: Google Open Media Sample (Escapes) • Licentie: CC0 Public Domain'
   },
   {
     id: 'os_media_8_zen',
-    creator: '@zen_sand_art',
-    creatorName: 'Kyoto Zen Garden',
+    creator: '@zen_fun_art',
+    creatorName: 'Extreme Fun Lab',
     creatorAvatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=120&q=80',
     verified: true,
     followers: '1.2M volgers',
-    caption: 'Zandharken in geometrische cirkels rondom een eeuwenoude rots... Diepe rust 🧘‍♂️✨ #zengarden #satisfying #meditatie #rust',
-    sound: 'Bamboo Wind Chimes & Gentle Rake Sound',
+    caption: 'Dit moet je zien! Wat een timing en energie 🚀🎉 #fun #energy #satisfying #hype',
+    sound: 'High Energy Beat - Creative Commons HQ',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
     bgImage: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=800&q=80',
     likes: 198500,
     comments: '1.9K',
     shares: '12.8K',
-    credits: 'Bron: Wikimedia Commons • Licentie: Creative Commons (CC-BY 2.0)'
+    credits: 'Bron: Google Media Open Bucket • Licentie: Creative Commons (CC-BY 2.0)'
   },
   {
     id: 'os_media_9',
@@ -420,13 +467,14 @@ const OPENSOURCE_MEDIA_CATALOG = [
     creatorAvatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=120&q=80',
     verified: true,
     followers: '3.7M volgers',
-    caption: 'Neon vloeistof stroomt door een labyrint van zwevende glasbollen 🔮🌊 80 uur gerenderd! #blender3d #cgi #satisfying #simulation',
+    caption: 'Pure vreugde en kleurexplosie in 60fps 🔮🌊 Bizar hoe scherp dit is! #blender3d #cgi #satisfying #simulation',
     sound: 'Synthwave Neon Waves - Infinite Loop HQ',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
     bgImage: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=800&q=80',
     likes: 742100,
     comments: '8.1K',
     shares: '64.9K',
-    credits: 'Bron: Blender Open Projects • Licentie: Creative Commons (CC-BY 4.0)'
+    credits: 'Bron: Google Open Media Sample • Licentie: Creative Commons (CC-BY 4.0)'
   },
   {
     id: 'os_media_10',
@@ -435,54 +483,89 @@ const OPENSOURCE_MEDIA_CATALOG = [
     creatorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
     verified: true,
     followers: '4.8M volgers',
-    caption: 'Het Noorderlicht danst over de fjorden van Noorwegen in 4K time-lapse 🌌✨ Magisch! #aurora #noorderlicht #natuur #timelapse',
+    caption: 'Als alles even te veel wordt... adem in en kijk dit 🌌✨ Magische effecten! #chill #satisfying #relax #timelapse',
     sound: 'Deep Ambient Universe - Ethereal Strings',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
     bgImage: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=800&q=80',
     likes: 915300,
     comments: '11.2K',
     shares: '89.4K',
-    credits: 'Bron: Pexels Open Nature Project • Licentie: CC0 Public Domain'
+    credits: 'Bron: Google Open Media Sample • Licentie: CC0 Public Domain'
   },
   {
     id: 'os_media_11',
-    creator: '@pottery_satisfaction',
-    creatorName: 'Clay Craft Studio',
+    creator: '@scifi_tears',
+    creatorName: 'Tears of Steel Sci-Fi',
     creatorAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80',
     verified: true,
     followers: '1.6M volgers',
-    caption: 'Klei vormen op een sneldraaiend pottenbakkerswiel 🏺💦 Kijk hoe symmetrisch dit wordt... #pottery #ceramics #satisfying #art',
-    sound: 'Water Drops & Ceramic Wheel Spin Sound',
+    caption: 'De legendarische sci-fi actiescène van Tears of Steel in Amsterdam! 🤖💥 100% open source CGI! #tearsOfSteel #blender3d #vfx #cgi',
+    sound: 'Sci-Fi Orchestral Beat - Jarno Sarkula',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
     bgImage: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?auto=format&fit=crop&w=800&q=80',
     likes: 341800,
     comments: '3.1K',
     shares: '21.5K',
-    credits: 'Bron: Pixabay Free Craft Media • Licentie: CC0 Public Domain'
+    credits: 'Bron: Blender Foundation Open Movie Project • Licentie: CC-BY 3.0'
   },
   {
     id: 'os_media_12',
-    creator: '@optical_illusions_nl',
-    creatorName: 'Mind Trick Daily',
+    creator: '@bullrun_roadtrip',
+    creatorName: 'Epic Roadtrips NL',
     creatorAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80',
     verified: true,
     followers: '2.9M volgers',
-    caption: 'Blijf 10 seconden naar de rode stip staren en knipper daarna 3 keer... 🌀😵 Je brein kan dit niet aan! #mindblown #optischeillusie #trucs',
-    sound: 'Mystery Hypnosis - Subtly Bending Sound',
+    caption: 'We are going on a bullrun! 🏎️💨 Het motorgeluid is echt ongeëvenaard! #roadtrip #cars #supercars #soundon',
+    sound: 'High Octane Engine Roar - Open Audio Suite',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
     bgImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80',
     likes: 567200,
     comments: '7.0K',
     shares: '48.3K',
-    credits: 'Bron: Wikimedia Commons Illusion Archive • Licentie: Creative Commons (CC-BY-SA 3.0)'
+    credits: 'Bron: Google Open Media Sample (Bullrun) • Licentie: CC-BY 3.0'
+  },
+  {
+    id: 'os_media_13',
+    creator: '@car_deals_nl',
+    creatorName: 'Auto Avontuur NL',
+    creatorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+    verified: true,
+    followers: '3.1M volgers',
+    caption: 'Wat voor auto kun je scoren voor 1000 euro?! 🚗👀 Je gelooft nooit wat er rijdt! #budgetcars #autotips #funny #challenge',
+    sound: 'Upbeat Funk Groove - Open Media Audio',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4',
+    bgImage: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=800&q=80',
+    likes: 412000,
+    comments: '4.2K',
+    shares: '31.0K',
+    credits: 'Bron: Google Open Media Sample • Licentie: CC-BY 3.0'
+  },
+  {
+    id: 'os_media_14',
+    creator: '@elephants_dream',
+    creatorName: 'Elephants Dream Studio',
+    creatorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+    verified: true,
+    followers: '1.4M volgers',
+    caption: 'De allereerste open-source 3D film ooit gemaakt ter wereld! 🎬🐘 Pure geschiedenis! #elephantsdream #openmovie #retro3d',
+    sound: 'Jan Morgenstern - Sound of Machine Dreams',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    bgImage: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80',
+    likes: 389000,
+    comments: '5.1K',
+    shares: '27.4K',
+    credits: 'Bron: Blender Foundation (Elephants Dream) • Licentie: CC-BY 2.5'
   }
 ];
 
-// FAKE AMBIENT PUSH NOTIFICATIES (ENGAGEMENT BAIT IN HET NEDERLANDS)
+// FAKE AMBIENT PUSH NOTIFICATIES (ENGAGEMENT BAIT IN HET NEDERLANDS - ZONDER SCHOOL THEMA)
 const PUSH_NOTIFICATIONS = [
   {
     app: 'TikTok',
     icon: 'play_arrow',
     color: '#000000',
     title: 'TikTok',
-    message: 'Kijk deze nieuwe video: "Docent betrapt stiekeme student..." 😱',
+    message: 'Kijk deze virale video: "Bizarre ontdekking op camera vastgelegd..." 😱',
     time: 'Zojuist'
   },
   {

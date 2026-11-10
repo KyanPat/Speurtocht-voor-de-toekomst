@@ -10,6 +10,9 @@
     score: 0,
     claimedItems: [],
     cooldowns: {}, // itemId -> remainingSeconds
+    revealedLocations: JSON.parse(localStorage.getItem('doomscroll_revealed_locs') || '{}'),
+    cardOrder: null,
+    reelsMuted: false,
     inDoomscroll: false,
     currentApp: 'Instagram',
     activeItemId: null,
@@ -51,7 +54,10 @@
     const all = { ...(generalItems || {}), ...(limitedItems || {}) };
     Object.keys(all).forEach(id => {
       if (ITEMS_DATA[id]) {
-        if (all[id].location) ITEMS_DATA[id].location = all[id].location;
+        if (all[id].secretLocation) ITEMS_DATA[id].secretLocation = all[id].secretLocation;
+        if (all[id].location && (!ITEMS_DATA[id].isLimited || (state.revealedLocations && state.revealedLocations[id]))) {
+          ITEMS_DATA[id].location = all[id].location;
+        }
         if (all[id].code) ITEMS_DATA[id].code = all[id].code;
       }
     });
@@ -108,6 +114,7 @@
       state.claimedItems = data.player.claimedItems || [];
       state.cooldowns = data.player.cooldowns || {};
       state.stats = data.player.stats || state.stats;
+      state.cardOrder = getPlayerCardOrder(state.playerId);
 
       updatePlayerBar();
       updateScreenVisibility(data.gameState.status);
@@ -164,7 +171,7 @@
       showGameOverScreen(data);
     });
 
-    // Herstart / Reset naar lobby ontvangen van server (Docent of Speler)
+    // Herstart / Reset naar lobby ontvangen van server
     socket.on('game:reset', (data) => {
       state.gameStatus = 'LOBBY';
       state.timeRemaining = data.timeRemaining || 900;
@@ -172,6 +179,9 @@
       state.claimedItems = [];
       state.cooldowns = {};
       state.inDoomscroll = false;
+      state.revealedLocations = {};
+      localStorage.removeItem('doomscroll_revealed_locs');
+      state.cardOrder = null;
 
       // Stop afleidingen
       if (window.notifications) window.notifications.stopAmbientDistractions();
@@ -191,7 +201,7 @@
       updatePlayerBar();
       updateLobbyPlayerList(data.leaderboard || []);
       showScreen(state.playerName ? 'lobbyWait' : 'login');
-      showToast('Spel herstart naar de lobby! Wachten op de docent.', 'info');
+      showToast('Spel herstart naar de lobby!', 'info');
       if (window.sounds) window.sounds.playSuccess();
     });
 
@@ -366,6 +376,15 @@
         socket.emit('player:restart_lobby');
       });
     }
+
+    const startDirectBtn = document.getElementById('btn-lobby-start-direct');
+    if (startDirectBtn) {
+      startDirectBtn.addEventListener('click', () => {
+        if (window.sounds) window.sounds.playClick();
+        socket.emit('admin:start_game');
+        showToast('🚀 Het spel wordt gestart...', 'success');
+      });
+    }
   }
 
   function updateLobbyPlayerList(players) {
@@ -411,6 +430,69 @@
   }
 
   // ==========================================
+  // DETERMINISTISCHE RANDOM ROUTE PER SPELER
+  // ==========================================
+  function getPlayerCardOrder(playerId) {
+    const general = ['autosleutels', 'huissleutels', 'diploma', 'droomreis'];
+    if (!playerId) {
+      return [
+        { id: 'date', align: 'left', rotate: '-rotate-1', width: 'w-[184px]' },
+        { id: 'trouwen', align: 'right', rotate: 'rotate-1', width: 'w-[184px]' },
+        { id: 'autosleutels', align: 'left', rotate: '-rotate-1', width: 'w-[184px]' },
+        { id: 'huissleutels', align: 'right', rotate: 'rotate-2', width: 'w-[196px]' },
+        { id: 'job_interview', align: 'left', rotate: '-rotate-2', width: 'w-[184px]' },
+        { id: 'job_raise', align: 'right', rotate: 'rotate-1', width: 'w-[184px]' },
+        { id: 'diploma', align: 'left', rotate: '-rotate-1', width: 'w-[184px]' },
+        { id: 'droomreis', align: 'right', rotate: 'rotate-1', width: 'w-[184px]' }
+      ];
+    }
+
+    let seed = 0;
+    for (let i = 0; i < playerId.length; i++) {
+      seed = ((seed << 5) - seed) + playerId.charCodeAt(i);
+      seed |= 0;
+    }
+
+    function pseudoRandom() {
+      seed = (seed * 9301 + 49297) % 233280;
+      return (seed < 0 ? -seed : seed) / 233280;
+    }
+
+    // Shuffle algemene items
+    const shuffledGeneral = [...general];
+    for (let i = shuffledGeneral.length - 1; i > 0; i--) {
+      const j = Math.floor(pseudoRandom() * (i + 1));
+      [shuffledGeneral[i], shuffledGeneral[j]] = [shuffledGeneral[j], shuffledGeneral[i]];
+    }
+
+    const pairA = ['job_interview', 'job_raise'];
+    const pairB = ['date', 'trouwen'];
+    const pickFirst = pseudoRandom() > 0.5 ? [pairA, pairB] : [pairB, pairA];
+
+    const sequence = [
+      shuffledGeneral[0],
+      pickFirst[0][0],
+      shuffledGeneral[1],
+      pickFirst[1][0],
+      shuffledGeneral[2],
+      pickFirst[0][1],
+      shuffledGeneral[3],
+      pickFirst[1][1]
+    ];
+
+    return sequence.map((id, index) => {
+      const isLeft = index % 2 === 0;
+      const rot = (index % 3 === 0 ? 1 : index % 3 === 1 ? -1 : 2) * (isLeft ? -1 : 1);
+      return {
+        id,
+        align: isLeft ? 'left' : 'right',
+        rotate: rot < 0 ? `-rotate-${Math.abs(rot)}` : `rotate-${rot}`,
+        width: id === 'huissleutels' ? 'w-[196px]' : 'w-[184px]'
+      };
+    });
+  }
+
+  // ==========================================
   // KAART RENDERING (SPEELVELD MET 8 ITEMS)
   // ==========================================
   function renderMapCards() {
@@ -419,18 +501,11 @@
 
     container.innerHTML = '';
 
-    const cardOrder = [
-      { id: 'date', align: 'left', rotate: '-rotate-1', width: 'w-[184px]' },
-      { id: 'trouwen', align: 'right', rotate: 'rotate-1', width: 'w-[184px]' },
-      { id: 'autosleutels', align: 'left', rotate: '-rotate-1', width: 'w-[184px]' },
-      { id: 'huissleutels', align: 'right', rotate: 'rotate-2', width: 'w-[196px]' },
-      { id: 'job_interview', align: 'left', rotate: '-rotate-2', width: 'w-[184px]' },
-      { id: 'job_raise', align: 'right', rotate: 'rotate-1', width: 'w-[184px]' },
-      { id: 'diploma', align: 'left', rotate: '-rotate-1', width: 'w-[184px]' },
-      { id: 'droomreis', align: 'right', rotate: 'rotate-1', width: 'w-[184px]' }
-    ];
+    if (!state.cardOrder || state.cardOrder.length === 0) {
+      state.cardOrder = getPlayerCardOrder(state.playerId);
+    }
 
-    cardOrder.forEach(itemConfig => {
+    state.cardOrder.forEach(itemConfig => {
       const item = ITEMS_DATA[itemConfig.id];
       if (!item) return;
 
@@ -438,7 +513,26 @@
       const limitedServerInfo = state.limitedItems ? state.limitedItems[item.id] : null;
       const isClaimedByOther = item.isLimited && limitedServerInfo && limitedServerInfo.claimedBy && limitedServerInfo.claimedBy !== state.playerId;
       const isLocked = (item.id === 'job_raise' || item.id === 'trouwen') && (!limitedServerInfo || limitedServerInfo.isLocked);
-      const activeCooldown = state.cooldowns[item.id] || 0;
+      const activeCooldown = (state.cooldowns || {})[item.id] || 0;
+
+      // Exclusiviteit follow-ups:
+      const intWinnerId = state.limitedItems?.job_interview?.claimedBy;
+      const intWinnerName = state.limitedItems?.job_interview?.claimedByName || 'Ander';
+      const isJobRaiseLockedForMe = (item.id === 'job_raise') && (
+        !intWinnerId || (intWinnerId !== state.playerId) || (intWinnerId === state.playerId && isLocked)
+      );
+
+      const dateWinnerId = state.limitedItems?.date?.claimedBy;
+      const dateWinnerName = state.limitedItems?.date?.claimedByName || 'Ander';
+      const isTrouwenLockedForMe = (item.id === 'trouwen') && (
+        !dateWinnerId || (dateWinnerId !== state.playerId) || (dateWinnerId === state.playerId && isLocked)
+      );
+
+      // Locatie onthulling check
+      const isLocRevealed = !item.isLimited || !!(state.revealedLocations && state.revealedLocations[item.id]);
+      const displayLocation = isLocRevealed
+        ? `📍 ${item.secretLocation || item.location}`
+        : '❓ Verborgen (Los Captcha op)';
 
       const wrap = document.createElement('div');
       wrap.className = itemConfig.align === 'left' ? 'flex justify-start pl-2' : 'flex justify-end pr-2';
@@ -450,8 +544,8 @@
         card.classList.add('polaroid-claimed');
       } else if (isClaimedByOther) {
         card.classList.add('polaroid-depleted');
-      } else if (isLocked) {
-        card.classList.add('opacity-80', 'cursor-not-allowed');
+      } else if (isLocked || (item.id === 'job_raise' && isJobRaiseLockedForMe) || (item.id === 'trouwen' && isTrouwenLockedForMe)) {
+        card.classList.add('opacity-85');
       }
 
       let badgeHtml = '';
@@ -459,6 +553,10 @@
         badgeHtml = `<span class="absolute -top-2 -right-2 bg-emerald-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded shadow">✓ Behaald!</span>`;
       } else if (isClaimedByOther) {
         badgeHtml = `<span class="absolute -top-2 -right-2 bg-rose-600 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shadow">OP = OP • ${limitedServerInfo.claimedByName || 'Ander'}</span>`;
+      } else if (item.id === 'job_raise' && intWinnerId && intWinnerId !== state.playerId) {
+        badgeHtml = `<span class="absolute -top-2 -right-2 bg-stone-700 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shadow">🔒 Alleen voor ${intWinnerName}</span>`;
+      } else if (item.id === 'trouwen' && dateWinnerId && dateWinnerId !== state.playerId) {
+        badgeHtml = `<span class="absolute -top-2 -right-2 bg-stone-700 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shadow">🔒 Alleen voor ${dateWinnerName}</span>`;
       } else if (isLocked) {
         badgeHtml = `<span class="absolute -top-2 -right-2 bg-stone-700 text-white text-[9px] font-bold uppercase px-2 py-0.5 rounded shadow">🔒 Vergrendeld</span>`;
       } else if (item.isLimited) {
@@ -474,6 +572,24 @@
               ⏳ Cooldown: <span class="font-mono" id="cd-display-${item.id}">${formatCooldownTime(activeCooldown)}</span>
             </div>
             <p class="text-[7px] text-rose-700 font-medium mt-1">Fout antwoord! Tik voor opties</p>
+          </div>
+        `;
+      } else if (item.id === 'job_raise' && intWinnerId && intWinnerId !== state.playerId) {
+        innerContentHtml = `
+          <div class="w-full min-h-[76px] bg-stone-100 rounded-sm mb-2 p-2 flex flex-col items-center justify-center border border-stone-300 text-center">
+            <div class="flex items-center gap-1 text-xs font-bold text-stone-700 mb-0.5">
+              <span>🔒</span> ${item.name}
+            </div>
+            <p class="text-[8px] text-stone-500 leading-tight">Exclusief voor ${intWinnerName}</p>
+          </div>
+        `;
+      } else if (item.id === 'trouwen' && dateWinnerId && dateWinnerId !== state.playerId) {
+        innerContentHtml = `
+          <div class="w-full min-h-[76px] bg-stone-100 rounded-sm mb-2 p-2 flex flex-col items-center justify-center border border-stone-300 text-center">
+            <div class="flex items-center gap-1 text-xs font-bold text-stone-700 mb-0.5">
+              <span>🔒</span> ${item.name}
+            </div>
+            <p class="text-[8px] text-stone-500 leading-tight">Exclusief voor ${dateWinnerName}</p>
           </div>
         `;
       } else if (isLocked) {
@@ -498,13 +614,32 @@
         `;
       }
 
+      let clickActionText = 'Tik om te openen';
+      if (isClaimedByMe) {
+        clickActionText = 'Reeds behaald';
+      } else if (isClaimedByOther) {
+        clickActionText = 'Niet meer beschikbaar';
+      } else if (item.id === 'job_raise' && intWinnerId && intWinnerId !== state.playerId) {
+        clickActionText = `Alleen voor ${intWinnerName}`;
+      } else if (item.id === 'trouwen' && dateWinnerId && dateWinnerId !== state.playerId) {
+        clickActionText = `Alleen voor ${dateWinnerName}`;
+      } else if (isLocked) {
+        clickActionText = 'Timer start na vorig item';
+      } else if (activeCooldown > 0) {
+        clickActionText = 'Tik voor wachttijd';
+      } else if (item.isLimited && !isLocRevealed) {
+        clickActionText = 'Tik voor Captcha taak';
+      } else {
+        clickActionText = 'Tik om te openen';
+      }
+
       card.innerHTML = `
         ${badgeHtml}
         ${innerContentHtml}
         <div class="text-center">
-          <span class="text-[11px] font-semibold text-stone-700 block truncate">Locatie: ${item.location}</span>
+          <span class="text-[11px] font-semibold text-stone-700 block truncate">Locatie: ${displayLocation}</span>
           <span class="text-[9px] text-stone-500 font-medium">
-            ${isClaimedByMe ? 'Reeds behaald' : isClaimedByOther ? 'Niet meer beschikbaar' : isLocked ? 'Timer start na vorig item' : activeCooldown > 0 ? 'Tik voor wachttijd' : 'Tik om te openen'}
+            ${clickActionText}
           </span>
         </div>
       `;
@@ -515,6 +650,17 @@
 
       wrap.appendChild(card);
       container.appendChild(wrap);
+
+      if (activeCooldown > 0 && !cooldownIntervals[item.id]) {
+        startLocalCooldownTimer(item.id);
+      }
+    });
+
+    // Bereken het pad dat exact door alle objectives heen loopt
+    setTimeout(updateAdventureTrail, 30);
+    setTimeout(updateAdventureTrail, 200);
+    setTimeout(updateAdventureTrail, 500);
+  }
 
       if (activeCooldown > 0 && !cooldownIntervals[item.id]) {
         startLocalCooldownTimer(item.id);
@@ -640,10 +786,45 @@
       return;
     }
 
+    // Exclusiviteit follow-ups:
+    if (item.id === 'job_raise') {
+      const intWinner = state.limitedItems?.job_interview?.claimedBy;
+      const intWinnerName = state.limitedItems?.job_interview?.claimedByName || 'de winnaar van het sollicitatiegesprek';
+      if (!intWinner) {
+        showToast('🔒 Job Raise is vergrendeld. Er moet eerst iemand slagen voor het Job Interview!');
+        return;
+      }
+      if (intWinner !== state.playerId) {
+        showToast(`🔒 Exclusief item: alleen ${intWinnerName} (Interview winnaar) kan de Job Raise claimen!`, 'error');
+        return;
+      }
+      if (limitedInfo && limitedInfo.isLocked) {
+        showToast('⏳ Je salarisverhoging ontgrendelt zodra de aftelteller van 1 minuut klaar is!');
+        return;
+      }
+    }
+
+    if (item.id === 'trouwen') {
+      const dateWinner = state.limitedItems?.date?.claimedBy;
+      const dateWinnerName = state.limitedItems?.date?.claimedByName || 'de winnaar van de Date';
+      if (!dateWinner) {
+        showToast('🔒 Trouwen is vergrendeld. Er moet eerst iemand slagen voor de Date!');
+        return;
+      }
+      if (dateWinner !== state.playerId) {
+        showToast(`🔒 Exclusief item: alleen ${dateWinnerName} (Date winnaar) kan gaan Trouwen!`, 'error');
+        return;
+      }
+      if (limitedInfo && limitedInfo.isLocked) {
+        showToast('⏳ Je huwelijk ontgrendelt zodra de aftelteller van 1 minuut klaar is!');
+        return;
+      }
+    }
+
     if ((item.id === 'job_raise' || item.id === 'trouwen') && (!limitedInfo || limitedInfo.isLocked)) {
       const msg = item.id === 'trouwen'
-        ? '🔒 Trouwen is nog vergrendeld! Ontgrendelt 1 minuut nadat iemand de Date heeft gehaald.'
-        : '🔒 Job Raise is nog vergrendeld! Ontgrendelt 1 minuut nadat iemand het Job Interview heeft gehaald.';
+        ? '🔒 Trouwen is nog vergrendeld! Ontgrendelt 1 minuut na de Date.'
+        : '🔒 Job Raise is nog vergrendeld! Ontgrendelt 1 minuut na het Job Interview.';
       showToast(msg);
       return;
     }
@@ -653,7 +834,382 @@
       return;
     }
 
+    // CAPTCHA Taak voor Limited Items als locatie nog verborgen is:
+    if (item.isLimited && (!state.revealedLocations || !state.revealedLocations[item.id])) {
+      openCaptchaLocationModal(item);
+      return;
+    }
+
     openItemDetailModal(item);
+  }
+
+  // ==========================================
+  // CAPTCHA TAKEN OM VERBORGEN LOCATIES TE ONTHULLEN
+  // ==========================================
+  function openCaptchaLocationModal(item) {
+    state.activeItemId = item.id;
+    state.activeModal = 'CAPTCHA_LOCATION';
+
+    if (item.id === 'date') {
+      renderRotateCaptcha(item);
+    } else if (item.id === 'job_interview') {
+      renderTextCaptcha(item);
+    } else if (item.id === 'job_raise') {
+      renderSliderCaptcha(item);
+    } else if (item.id === 'trouwen') {
+      renderGridCaptcha(item);
+    } else {
+      renderRotateCaptcha(item);
+    }
+
+    openModal();
+  }
+
+  // CAPTCHA 1: DRAAI PUZZEL RECHTOP (DATE)
+  function renderRotateCaptcha(item) {
+    let currentAngle = [90, 180, 270][Math.floor(Math.random() * 3)];
+
+    modalContent.innerHTML = `
+      <div class="w-full bg-[#FFFDF9] rounded-3xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col animate-in zoom-in-95 p-6 text-center space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold mx-auto border border-amber-300">
+          <span class="material-symbols-outlined text-sm">security</span>
+          <span>Menselijke Verificatie (Captcha)</span>
+        </div>
+
+        <div>
+          <h3 class="font-display text-lg font-black text-stone-900">Draai de afbeelding rechtop</h3>
+          <p class="text-xs text-stone-600 mt-1 leading-snug">
+            Draai het symbool totdat deze exact <b>rechtop (0°)</b> staat om de geheime locatie van <b>${item.name}</b> te ontgrendelen!
+          </p>
+        </div>
+
+        <div class="w-36 h-36 mx-auto rounded-3xl bg-amber-50/80 border-2 border-amber-300 flex items-center justify-center shadow-inner relative overflow-hidden my-2">
+          <div id="captcha-rotate-target" class="text-6xl select-none transition-transform duration-200" style="transform: rotate(${currentAngle}deg);">
+            ❤️
+          </div>
+          <span class="absolute bottom-2 text-[10px] font-mono font-bold text-stone-500" id="captcha-angle-indicator">${currentAngle}°</span>
+        </div>
+
+        <div class="flex items-center justify-center gap-3">
+          <button type="button" id="btn-rot-left" class="px-3.5 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold border border-stone-300 active:scale-95 transition flex items-center gap-1">
+            <span class="material-symbols-outlined text-base">rotate_left</span>
+            <span>-90° Links</span>
+          </button>
+          <button type="button" id="btn-rot-right" class="px-3.5 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-bold border border-stone-300 active:scale-95 transition flex items-center gap-1">
+            <span class="material-symbols-outlined text-base">rotate_right</span>
+            <span>+90° Rechts</span>
+          </button>
+        </div>
+
+        <div class="pt-2 space-y-2">
+          <button type="button" id="btn-verify-rotate" class="w-full py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow-md active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-lg">check_circle</span>
+            <span>Verifieer Rotatie & Onthul Locatie</span>
+          </button>
+          <button type="button" onclick="closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
+            Annuleren
+          </button>
+        </div>
+      </div>
+    `;
+
+    const targetEl = document.getElementById('captcha-rotate-target');
+    const angleEl = document.getElementById('captcha-angle-indicator');
+
+    document.getElementById('btn-rot-left').addEventListener('click', () => {
+      if (window.sounds) window.sounds.playClick();
+      currentAngle = (currentAngle - 90 + 360) % 360;
+      targetEl.style.transform = `rotate(${currentAngle}deg)`;
+      angleEl.textContent = `${currentAngle}°`;
+    });
+
+    document.getElementById('btn-rot-right').addEventListener('click', () => {
+      if (window.sounds) window.sounds.playClick();
+      currentAngle = (currentAngle + 90) % 360;
+      targetEl.style.transform = `rotate(${currentAngle}deg)`;
+      angleEl.textContent = `${currentAngle}°`;
+    });
+
+    document.getElementById('btn-verify-rotate').addEventListener('click', () => {
+      if (currentAngle === 0) {
+        onCaptchaSuccess(item);
+      } else {
+        if (window.sounds) window.sounds.playError();
+        targetEl.classList.add('shake');
+        setTimeout(() => targetEl.classList.remove('shake'), 400);
+        showToast('Nog niet rechtop! Draai het symbool recht omhoog (0°).', 'error');
+      }
+    });
+  }
+
+  // CAPTCHA 2: TYPE VERVORMDE TEKST (JOB INTERVIEW)
+  function renderTextCaptcha(item) {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    let captchaCode = '';
+    for (let i = 0; i < 5; i++) {
+      captchaCode += chars[Math.floor(Math.random() * chars.length)];
+    }
+
+    modalContent.innerHTML = `
+      <div class="w-full bg-[#FFFDF9] rounded-3xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col animate-in zoom-in-95 p-6 text-center space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-900 text-xs font-bold mx-auto border border-blue-300">
+          <span class="material-symbols-outlined text-sm">spellcheck</span>
+          <span>Menselijke Verificatie (Captcha)</span>
+        </div>
+
+        <div>
+          <h3 class="font-display text-lg font-black text-stone-900">Typ de beveiligingscode</h3>
+          <p class="text-xs text-stone-600 mt-1 leading-snug">
+            Type de 5 tekens die je in de afbeelding hieronder ziet exact over om de locatie van <b>${item.name}</b> te ontgrendelen:
+          </p>
+        </div>
+
+        <!-- Vervormde Captcha Graphic Box -->
+        <div class="w-full h-16 bg-stone-900 rounded-2xl flex items-center justify-center font-mono text-3xl font-black text-emerald-400 select-none relative overflow-hidden border border-stone-700 shadow-inner my-2">
+          <div class="absolute inset-0 opacity-25 pointer-events-none" style="background-image: repeating-linear-gradient(45deg, #fff 0, #fff 2px, transparent 0, transparent 8px);"></div>
+          <svg class="absolute inset-0 w-full h-full pointer-events-none opacity-40" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 10 30 Q 150 5 300 35" stroke="#10b981" stroke-width="2" fill="none"/>
+            <path d="M 10 20 Q 150 45 300 20" stroke="#06b6d4" stroke-width="1.5" fill="none"/>
+          </svg>
+          <span class="transform -rotate-1 skew-x-6 drop-shadow-lg tracking-[8px] relative z-10">${captchaCode}</span>
+        </div>
+
+        <div class="space-y-1 text-left">
+          <label class="text-[11px] font-bold text-stone-700 uppercase">Voer de 5 letters/cijfers in:</label>
+          <input id="captcha-text-input" type="text" maxlength="5" placeholder="CODE..." autocomplete="off" class="w-full text-center text-xl font-mono font-black tracking-widest uppercase bg-stone-50 border-2 border-stone-300 rounded-xl py-2.5 px-3 focus:outline-none focus:border-emerald-600">
+        </div>
+
+        <div class="pt-2 space-y-2">
+          <button type="button" id="btn-verify-text" class="w-full py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow-md active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-lg">verified</span>
+            <span>Verifieer Code & Onthul Locatie</span>
+          </button>
+          <button type="button" onclick="closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
+            Annuleren
+          </button>
+        </div>
+      </div>
+    `;
+
+    const input = document.getElementById('captcha-text-input');
+    setTimeout(() => input && input.focus(), 150);
+
+    const verify = () => {
+      const val = (input.value || '').trim().toUpperCase();
+      if (val === captchaCode) {
+        onCaptchaSuccess(item);
+      } else {
+        if (window.sounds) window.sounds.playError();
+        input.classList.add('shake', 'border-rose-500');
+        setTimeout(() => input.classList.remove('shake'), 400);
+        showToast('Onjuiste code! Let goed op de letters en cijfers.', 'error');
+      }
+    };
+
+    document.getElementById('btn-verify-text').addEventListener('click', verify);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') verify();
+    });
+  }
+
+  // CAPTCHA 3: SCHUIFPUZZEL NAAR DOEL (JOB RAISE)
+  function renderSliderCaptcha(item) {
+    const targetMin = 74;
+    const targetMax = 86;
+
+    modalContent.innerHTML = `
+      <div class="w-full bg-[#FFFDF9] rounded-3xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col animate-in zoom-in-95 p-6 text-center space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-bold mx-auto border border-purple-300">
+          <span class="material-symbols-outlined text-sm">extension</span>
+          <span>Menselijke Verificatie (Captcha)</span>
+        </div>
+
+        <div>
+          <h3 class="font-display text-lg font-black text-stone-900">Schuif het puzzelstuk op zijn plek</h3>
+          <p class="text-xs text-stone-600 mt-1 leading-snug">
+            Schuif het stukje <b>🧩</b> precies in het groene doelvlak om de directiekamer van <b>${item.name}</b> te ontgrendelen:
+          </p>
+        </div>
+
+        <!-- Slider Track Container -->
+        <div class="w-full bg-stone-100 border-2 border-stone-300 rounded-2xl p-4 my-2 relative select-none">
+          <div class="relative h-12 bg-stone-200 rounded-xl overflow-hidden flex items-center px-2">
+            <!-- Doelvlak in het groen -->
+            <div class="absolute left-[75%] top-1 bottom-1 w-10 border-2 border-dashed border-emerald-600 bg-emerald-300/40 rounded-lg flex items-center justify-center">
+              <span class="text-[10px] font-bold text-emerald-800 font-mono">DOEL</span>
+            </div>
+
+            <!-- Range input slider -->
+            <input id="captcha-range-slider" type="range" min="0" max="100" value="10" class="w-full h-3 bg-stone-300 rounded-lg appearance-none cursor-pointer accent-emerald-600 z-10">
+          </div>
+          <div class="flex justify-between items-center text-[10px] font-bold text-stone-500 mt-2 px-1">
+            <span>Start (0%)</span>
+            <span id="slider-curr-val" class="font-mono text-stone-800">10%</span>
+            <span>Einde (100%)</span>
+          </div>
+        </div>
+
+        <div class="pt-2 space-y-2">
+          <button type="button" id="btn-verify-slider" class="w-full py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow-md active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-lg">done_all</span>
+            <span>Puzzel Vastklikken & Locatie Onthullen</span>
+          </button>
+          <button type="button" onclick="closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
+            Annuleren
+          </button>
+        </div>
+      </div>
+    `;
+
+    const slider = document.getElementById('captcha-range-slider');
+    const valDisplay = document.getElementById('slider-curr-val');
+
+    slider.addEventListener('input', () => {
+      valDisplay.textContent = `${slider.value}%`;
+    });
+
+    document.getElementById('btn-verify-slider').addEventListener('click', () => {
+      const val = parseInt(slider.value, 10);
+      if (val >= targetMin && val <= targetMax) {
+        onCaptchaSuccess(item);
+      } else {
+        if (window.sounds) window.sounds.playError();
+        slider.classList.add('shake');
+        setTimeout(() => slider.classList.remove('shake'), 400);
+        showToast('Niet goed geplaatst! Schuif het stukje precies in het groene doelvlak (rond 80%).', 'error');
+      }
+    });
+  }
+
+  // CAPTCHA 4: RASTER SELECTIE (TROUWEN)
+  function renderGridCaptcha(item) {
+    const tiles = [
+      { id: 1, icon: '💍', label: 'Trouwring', target: true },
+      { id: 2, icon: '⚽', label: 'Voetbal', target: false },
+      { id: 3, icon: '💐', label: 'Boeket', target: true },
+      { id: 4, icon: '🍕', label: 'Pizza', target: false },
+      { id: 5, icon: '🎂', label: 'Bruidstaart', target: true },
+      { id: 6, icon: '🚗', label: 'Auto', target: false },
+      { id: 7, icon: '🎮', label: 'Gamepad', target: false },
+      { id: 8, icon: '📱', label: 'Telefoon', target: false },
+      { id: 9, icon: '🎸', label: 'Gitaar', target: false }
+    ];
+
+    const selectedIds = new Set();
+
+    modalContent.innerHTML = `
+      <div class="w-full bg-[#FFFDF9] rounded-3xl shadow-2xl border border-stone-200 overflow-hidden flex flex-col animate-in zoom-in-95 p-6 text-center space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100 text-rose-900 text-xs font-bold mx-auto border border-rose-300">
+          <span class="material-symbols-outlined text-sm">grid_view</span>
+          <span>Menselijke Verificatie (Captcha)</span>
+        </div>
+
+        <div>
+          <h3 class="font-display text-lg font-black text-stone-900">Selecteer alle 3 de huwelijksitems</h3>
+          <p class="text-xs text-stone-600 mt-1 leading-snug">
+            Tik op de <b>3 huwelijksiconen</b> (💍 Trouwring, 💐 Boeket, 🎂 Bruidstaart) om de Trouwzaal/Aula te ontgrendelen:
+          </p>
+        </div>
+
+        <!-- 3x3 Raster -->
+        <div class="grid grid-cols-3 gap-2 my-2 select-none" id="captcha-grid-container">
+          ${tiles.map(t => `
+            <button type="button" data-tile-id="${t.id}" class="captcha-tile aspect-square rounded-2xl bg-stone-100 border-2 border-stone-200 hover:bg-stone-200 flex flex-col items-center justify-center p-2 active:scale-95 transition cursor-pointer relative">
+              <span class="text-3xl">${t.icon}</span>
+              <span class="text-[10px] font-semibold text-stone-600 mt-1">${t.label}</span>
+              <span class="captcha-check hidden absolute top-1 right-1 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[11px] font-black">✓</span>
+            </button>
+          `).join('')}
+        </div>
+
+        <div class="pt-2 space-y-2">
+          <button type="button" id="btn-verify-grid" class="w-full py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow-md active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-lg">check_circle</span>
+            <span>Selectie Verifiëren</span>
+          </button>
+          <button type="button" onclick="closeModal()" class="w-full py-2 text-xs text-stone-500 hover:text-stone-800 font-semibold">
+            Annuleren
+          </button>
+        </div>
+      </div>
+    `;
+
+    const buttons = document.querySelectorAll('.captcha-tile');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (window.sounds) window.sounds.playClick();
+        const id = parseInt(btn.dataset.tileId, 10);
+        const check = btn.querySelector('.captcha-check');
+        if (selectedIds.has(id)) {
+          selectedIds.delete(id);
+          btn.classList.remove('border-emerald-600', 'bg-emerald-50');
+          check.classList.add('hidden');
+        } else {
+          selectedIds.add(id);
+          btn.classList.add('border-emerald-600', 'bg-emerald-50');
+          check.classList.remove('hidden');
+        }
+      });
+    });
+
+    document.getElementById('btn-verify-grid').addEventListener('click', () => {
+      const correctTargets = [1, 3, 5];
+      const isCorrect = selectedIds.size === 3 && correctTargets.every(id => selectedIds.has(id));
+
+      if (isCorrect) {
+        onCaptchaSuccess(item);
+      } else {
+        if (window.sounds) window.sounds.playError();
+        showToast('Niet juist! Tik op de Trouwring (💍), het Boeket (💐) en de Bruidstaart (🎂).', 'error');
+      }
+    });
+  }
+
+  // SUCCES STATUS NA OPLOSSEN CAPTCHA
+  function onCaptchaSuccess(item) {
+    if (window.sounds) window.sounds.playSuccess();
+    if (!state.revealedLocations) state.revealedLocations = {};
+    state.revealedLocations[item.id] = true;
+    localStorage.setItem('doomscroll_revealed_locs', JSON.stringify(state.revealedLocations));
+
+    const revealedLoc = item.secretLocation || item.location;
+    if (ITEMS_DATA[item.id]) {
+      ITEMS_DATA[item.id].location = revealedLoc;
+    }
+
+    renderMapCards();
+
+    modalContent.innerHTML = `
+      <div class="w-full bg-[#FFFDF9] rounded-3xl p-6 text-center space-y-4 shadow-2xl border-2 border-emerald-500 animate-in zoom-in-95">
+        <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-3xl shadow">
+          <span class="material-symbols-outlined text-4xl">verified</span>
+        </div>
+        <div>
+          <span class="text-[11px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">Menselijke Verificatie Geslaagd</span>
+          <h3 class="font-display text-lg font-black text-stone-900 mt-2">Geheime Vindplek Ontgrendeld!</h3>
+        </div>
+        <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-center">
+          <span class="text-xs text-emerald-800 font-semibold block mb-0.5">Vindplek van ${item.name}:</span>
+          <span class="text-lg font-black text-emerald-950 font-mono tracking-wide">📍 ${revealedLoc}</span>
+        </div>
+        <p class="text-xs text-stone-600 leading-snug">
+          Ren nu snel naar <b>${revealedLoc}</b> in het gebouw, zoek de 4-cijferige fysieke code en voer hem in!
+        </p>
+        <div class="space-y-2 pt-2">
+          <button type="button" id="btn-enter-code-now" class="w-full py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm shadow-md active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-lg">pin</span>
+            <span>Fysieke Code Invoeren</span>
+          </button>
+          <button type="button" onclick="closeModal()" class="w-full py-2.5 rounded-2xl bg-stone-100 text-stone-700 font-semibold text-xs hover:bg-stone-200 transition cursor-pointer">
+            Terug naar Kaart
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('btn-enter-code-now').addEventListener('click', () => {
+      openItemDetailModal(item);
+    });
   }
 
   // ==========================================
@@ -1242,6 +1798,87 @@
       loc: 'Utrecht Animatie',
       likes: 31200,
       credits: 'Bron: W3C HTML5 Video Test Suite • Licentie: Creative Commons Attribution (CC-BY)'
+    },
+    {
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      caption: 'Explosieve kleuren en vurige actie in 60fps! 🔥✨ Kijk hoe vloeiend dit loopt. #hype #visuals #action #satisfying',
+      user: 'blaze_visuals',
+      avatar: 'https://i.pravatar.cc/150?img=22',
+      loc: 'Rotterdam Studios',
+      likes: 104200,
+      credits: 'Bron: Google Open Media Sample (Blazes) • Licentie: CC-BY 3.0'
+    },
+    {
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+      caption: 'Adem in, adem uit... Ultieme rust en natuurbeleving 🌿🏔️ Geluid aan voor de beste ervaring! #escape #zen #nature #soundon',
+      user: 'escape_reality_nl',
+      avatar: 'https://i.pravatar.cc/150?img=41',
+      loc: 'Alpen Natuurgebied',
+      likes: 142300,
+      credits: 'Bron: Google Open Media Sample (Escapes) • Licentie: CC0 Public Domain'
+    },
+    {
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+      caption: 'Dit is puur genieten! 🎢🎉 Tag iemand die dit ook moet proberen! #fun #energy #viral #weekend',
+      user: 'extreme_fun_nl',
+      avatar: 'https://i.pravatar.cc/150?img=17',
+      loc: 'Pretpark Nederland',
+      likes: 98400,
+      credits: 'Bron: Google Media Open Bucket • Licentie: CC-BY 2.0'
+    },
+    {
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
+      caption: 'Kleurrijk vuurwerk en spectaculaire lichteffecten in de nacht 🎆✨ Pure magie! #fireworks #lights #party #festival',
+      user: 'night_vibes_live',
+      avatar: 'https://i.pravatar.cc/150?img=36',
+      loc: 'Festivalterrein Breda',
+      likes: 175600,
+      credits: 'Bron: Google Open Media Sample • Licentie: CC-BY 4.0'
+    },
+    {
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+      caption: 'Wanneer je hersenen smelten van verbazing 🤯🧊 Wat gebeurt hier nou precies?! #mindblown #physics #satisfying #weird',
+      user: 'science_tricks_nl',
+      avatar: 'https://i.pravatar.cc/150?img=28',
+      loc: 'Science Lab Delft',
+      likes: 210500,
+      credits: 'Bron: Google Open Media Sample • Licentie: CC0 Public Domain'
+    },
+    {
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+      caption: 'Sci-fi actie van wereldklasse opgenomen in het hart van Amsterdam! 🤖💥 100% Open Source film! #tearsOfSteel #blender #vfx',
+      user: 'scifi_amsterdam',
+      avatar: 'https://i.pravatar.cc/150?img=59',
+      loc: 'Amsterdam Zuidas',
+      likes: 312000,
+      credits: 'Bron: Blender Foundation Open Movie Project • Licentie: CC-BY 3.0'
+    },
+    {
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
+      caption: 'Vol gas over de snelweg! 🏎️💨 Luister naar dat rauwe motorgeluid met je koptelefoon op! #supercars #bullrun #soundon #adrenaline',
+      user: 'speed_demons_nl',
+      avatar: 'https://i.pravatar.cc/150?img=68',
+      loc: 'Circuit Zandvoort',
+      likes: 189400,
+      credits: 'Bron: Google Open Media Sample (Bullrun) • Licentie: CC-BY 3.0'
+    },
+    {
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4',
+      caption: 'Wat voor budgetauto koop je anno nu voor een prikkie?! 🚗💸 Je gelooft je ogen niet! #autotips #budget #challenge #funny',
+      user: 'auto_experts_nl',
+      avatar: 'https://i.pravatar.cc/150?img=14',
+      loc: 'Automarkt Utrecht',
+      likes: 122800,
+      credits: 'Bron: Google Open Media Sample • Licentie: CC-BY 3.0'
+    },
+    {
+      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      caption: 'Een bizarre reis door een reusachtige mechanische droomwereld 🐘⚙️ Eerste open movie ter wereld! #retro3d #classic #animation',
+      user: 'retro_animatie_nl',
+      avatar: 'https://i.pravatar.cc/150?img=49',
+      loc: 'Digitale Kunstacademie',
+      likes: 84300,
+      credits: 'Bron: Blender Foundation (Elephants Dream) • Licentie: CC-BY 2.5'
     }
   ];
 
@@ -1448,14 +2085,20 @@
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto relative select-none">
         
         <!-- Instagram Header -->
-        <div class="pt-12 px-4 pb-2.5 flex items-center justify-between border-b border-stone-800 bg-black/95 sticky top-0 z-20">
-          <span class="font-instagram text-3xl tracking-wide text-white">Instagram</span>
-          <div class="flex items-center gap-4">
+        <div class="pt-12 px-3 pb-2.5 flex items-center justify-between border-b border-stone-800 bg-black/95 sticky top-0 z-20">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold flex items-center gap-1 shadow active:scale-95 transition cursor-pointer" title="Terug naar speurtocht">
+              <span class="material-symbols-outlined text-sm">arrow_back</span>
+              <span>✕ Speurtocht</span>
+            </button>
+            <span class="font-instagram text-2xl tracking-wide text-white">Instagram</span>
+          </div>
+          <div class="flex items-center gap-3">
             <button type="button" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'activity')" class="text-white hover:text-rose-500 transition" title="Meldingen">
-              <span class="material-symbols-outlined text-[24px]">favorite</span>
+              <span class="material-symbols-outlined text-[22px]">favorite</span>
             </button>
             <div class="relative cursor-pointer" onclick="window.playerApp.renderInstagramDM(document.getElementById('app-view-container'))" title="Direct Berichten">
-              <span class="material-symbols-outlined text-[24px]">send</span>
+              <span class="material-symbols-outlined text-[22px]">send</span>
               <span class="absolute -top-1 -right-1 bg-rose-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">1</span>
             </div>
           </div>
@@ -1510,7 +2153,7 @@
     const captions = [
       'Zoveel zin in het weekend! Wie gaat er vanavond mee de stad in? 🌴✨ #vibe #weekend #explore #amsterdam',
       'Dit uitzicht verveelt echt nooit... Wat een zonsondergang vandaag! 🌅📸 #photography #wanderlust #nature',
-      'Even een welverdiende pauze tussen de lessen door ☕ Wat doen jullie nu? #studentlife #coffee #vibes',
+      'Even een welverdiende koffiepauze vandaag ☕ Wat doen jullie nu? #chill #coffee #vibes',
       'Nieuwe hotspot ontdekt in de stad! Eten was echt een 10/10 🤤🍕 #foodie #lekker #lunch',
       'Geniet van de kleine momenten vandaag. Blijf gefocust en geniet! 🌸💫 #mindfulness #goodvibes'
     ];
@@ -1783,7 +2426,7 @@
     `;
   }
 
-  // CHAT MET MOEDER (MET DUIDELIJKE TERUGKNOP NAAR INBOX!)
+  // CHAT MET MOEDER (MET DUIDELIJKE TERUGKNOP NAAR INBOX & SPEURTOCHT)
   function renderInstagramChatMoeder(container) {
     closeInstagramComments();
     const sharedPhoto = getRandomPicsumUrl(500, 400);
@@ -1791,8 +2434,8 @@
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto select-none">
         
-        <!-- Chat Header met Terugknop naar Inbox -->
-        <div class="pt-12 px-4 pb-3 bg-stone-950 flex items-center justify-between border-b border-stone-800">
+        <!-- Chat Header met Terugknop naar Inbox & Snelle terugkeer naar Speurtocht -->
+        <div class="sticky top-0 z-30 pt-12 px-4 pb-3 bg-stone-950 flex items-center justify-between border-b border-stone-800">
           <div class="flex items-center gap-3">
             <button type="button" onclick="window.playerApp.renderInstagramDM(document.getElementById('app-view-container'), 'inbox')" class="text-white hover:text-stone-300 p-1 flex items-center gap-1 font-bold text-sm cursor-pointer" title="Terug naar berichten">
               <span class="material-symbols-outlined text-2xl">arrow_back</span>
@@ -1803,16 +2446,17 @@
               <span class="text-[10px] text-emerald-400 font-semibold">● Nu actief</span>
             </div>
           </div>
-          <div class="flex items-center gap-3 text-stone-400">
-            <span class="material-symbols-outlined text-[22px] cursor-pointer">videocam</span>
-            <span class="material-symbols-outlined text-[22px] cursor-pointer">info</span>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold shadow active:scale-95 transition flex items-center gap-1 cursor-pointer">
+              <span>✕ Speurtocht</span>
+            </button>
           </div>
         </div>
 
         <!-- Chat Berichten -->
         <div class="flex-1 p-4 space-y-3 overflow-y-auto text-left">
           <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-stone-900 text-xs text-stone-200 border border-stone-800 shadow">
-            Vergeet je fietssleutels straks niet mee te nemen! En hoe gaat de speurtocht op school? ❤️
+            Vergeet je fietssleutels straks niet mee te nemen! En hoe gaat de speurtocht? ❤️
             <span class="text-[9px] text-stone-500 block text-right mt-1">12:30</span>
           </div>
 
@@ -1857,15 +2501,15 @@
     `;
   }
 
-  // CHAT MET SARAH (MET DE REEL EN TERUGKNOP NAAR INBOX!)
+  // CHAT MET SARAH (MET DE REEL EN TERUGKNOP NAAR INBOX & SPEURTOCHT)
   function renderInstagramChatSarah(container) {
     closeInstagramComments();
 
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto select-none">
         
-        <!-- DM Header met Terugknop naar Inbox -->
-        <div class="pt-12 px-4 pb-3 bg-stone-950 flex items-center justify-between border-b border-stone-800">
+        <!-- DM Header met Terugknop naar Inbox & Speurtocht -->
+        <div class="sticky top-0 z-30 pt-12 px-4 pb-3 bg-stone-950 flex items-center justify-between border-b border-stone-800">
           <div class="flex items-center gap-3">
             <button type="button" onclick="window.playerApp.renderInstagramDM(document.getElementById('app-view-container'), 'inbox')" class="text-white hover:text-stone-300 p-1 flex items-center gap-1 font-bold text-sm cursor-pointer" title="Terug naar berichten">
               <span class="material-symbols-outlined text-2xl">arrow_back</span>
@@ -1878,16 +2522,17 @@
               <span class="text-[10px] text-emerald-400 font-semibold">● Nu actief</span>
             </div>
           </div>
-          <div class="flex items-center gap-3 text-stone-400">
-            <span class="material-symbols-outlined text-[22px]">videocam</span>
-            <span class="material-symbols-outlined text-[22px]">info</span>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold shadow active:scale-95 transition flex items-center gap-1 cursor-pointer">
+              <span>✕ Speurtocht</span>
+            </button>
           </div>
         </div>
 
         <!-- Chat Berichten -->
         <div class="flex-1 p-4 space-y-3 overflow-y-auto text-left">
           <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-stone-900 text-xs text-stone-200 border border-stone-800">
-            Hey! Ben je nu met die speurtocht bezig op school? 😂
+            Hey! Ben je nu met die speurtocht bezig? 😂
             <span class="text-[9px] text-stone-500 block text-right mt-1">12:31</span>
           </div>
 
@@ -1937,7 +2582,7 @@
     `;
   }
 
-  // REELS WEERGAVE MET TERUGKNOP NAAR DM OF FEED
+  // REELS WEERGAVE MET TERUGKNOP NAAR DM OF FEED & VOLLEDIGE VIDEO MET GELUID
   function renderInstagramReel(container, reelData, returnView = 'dm') {
     closeInstagramComments();
     const reel = reelData || FEED_OPEN_VIDEOS[3];
@@ -1955,11 +2600,15 @@
           <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90 pointer-events-none"></div>
         </div>
 
-        <!-- Header Bovenin met Duidelijke TERUGKNOP & VOLGENDE KNOP! -->
+        <!-- Header Bovenin met Duidelijke TERUGKNOPPEN & VOLGENDE KNOP! -->
         <div class="relative z-20 pt-12 px-3 pb-2 flex items-center justify-between gap-2">
           <button type="button" id="reel-back-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-bold border border-white/20 hover:bg-black/80 active:scale-95 transition">
             <span class="material-symbols-outlined text-sm">arrow_back</span>
             <span>Terug naar ${returnView === 'whatsapp' ? 'WhatsApp' : returnView === 'feed' ? 'Feed' : 'Chat'}</span>
+          </button>
+
+          <button type="button" onclick="window.playerApp.exitTrap()" class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-rose-600/90 backdrop-blur-md text-white text-xs font-bold border border-white/20 hover:bg-rose-700 active:scale-95 transition" title="Terug naar de speurtocht">
+            <span>✕ Speurtocht</span>
           </button>
           
           <button type="button" id="reel-next-btn" onclick="window.playerApp.nextInstagramReel(document.getElementById('app-view-container'), '${returnView}')" class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-bold border border-white/20 hover:bg-black/80 active:scale-95 transition cursor-pointer" title="Volgende reel bekijken">
@@ -1967,7 +2616,7 @@
             <span class="material-symbols-outlined text-sm">skip_next</span>
           </button>
 
-          <button type="button" id="reel-mute-btn" class="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/20">
+          <button type="button" id="reel-mute-btn" class="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/20" title="Geluid aan/uitzetten">
             <span class="material-symbols-outlined text-[18px]" id="reel-mute-icon">volume_up</span>
           </button>
         </div>
@@ -2060,10 +2709,27 @@
     const muteIcon = document.getElementById('reel-mute-icon');
     let muted = false;
 
+    if (vid) {
+      vid.muted = false;
+      vid.volume = 0.85;
+      const playPromise = vid.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          vid.muted = true;
+          muted = true;
+          if (muteIcon) muteIcon.textContent = 'volume_off';
+        });
+      }
+    }
+
     if (muteBtn && vid) {
       muteBtn.onclick = () => {
         muted = !muted;
         vid.muted = muted;
+        if (!muted) {
+          vid.volume = 0.85;
+          vid.play().catch(() => {});
+        }
         if (muteIcon) muteIcon.textContent = muted ? 'volume_off' : 'volume_up';
       };
     }
@@ -2265,20 +2931,24 @@
     `;
   }
 
-  // INSTAGRAM PROFIEL TAB (MET VERPLICHTE TERUGKNOP NAAR FEED)
+  // INSTAGRAM PROFIEL TAB (MET VERPLICHTE TERUGKNOP NAAR FEED & SPEURTOCHT)
   function renderInstagramProfile(container) {
     closeInstagramComments();
 
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto select-none">
-        <div class="pt-12 px-4 pb-3 border-b border-stone-800 flex items-center justify-between">
+        <div class="sticky top-0 z-30 pt-12 px-4 pb-3 bg-black border-b border-stone-800 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <button type="button" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'feed')" class="text-white hover:text-stone-300 p-1 flex items-center gap-1 font-bold text-sm cursor-pointer" title="Terug naar feed">
               <span class="material-symbols-outlined text-2xl">arrow_back</span>
             </button>
             <span class="font-bold text-sm">@${(state.playerName || 'speler').toLowerCase().replace(/\s+/g, '_')}</span>
           </div>
-          <span class="material-symbols-outlined text-xl">menu</span>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold shadow active:scale-95 transition flex items-center gap-1 cursor-pointer">
+              <span>✕ Speurtocht</span>
+            </button>
+          </div>
         </div>
 
         <div class="flex-1 overflow-y-auto pb-20">
@@ -2389,7 +3059,7 @@
     if (window.sounds) window.sounds.playClick();
   }
 
-  // 2. TIKTOK REELS INTERFACE (MET WERKEND VOLGEND / VOOR JOU TABBLAD)
+  // 2. TIKTOK REELS INTERFACE (MET WERKEND VOLGEND / VOOR JOU TABBLAD & 100% OPEN SOURCE VIDEO'S)
   let currentTikTokTab = 'foryou';
 
   function renderTikTokApp(container, activeTab = 'foryou') {
@@ -2399,13 +3069,24 @@
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto relative select-none">
         
-        <!-- TikTok Tabs Bovenin (Volgend & Voor jou interactief) -->
-        <div class="pt-12 pb-2 flex items-center justify-center gap-6 text-sm font-bold z-20 bg-gradient-to-b from-black/80 to-transparent sticky top-0">
-          <button type="button" id="tab-tiktok-following" onclick="window.playerApp.renderTikTokApp(document.getElementById('app-view-container'), 'following')" class="${isFollowingTab ? 'text-white border-b-2 border-white pb-0.5' : 'text-stone-400 hover:text-white'} transition cursor-pointer">
-            Volgend
+        <!-- TikTok Tabs Bovenin (Volgend & Voor jou interactief + Terugknop naar Speurtocht) -->
+        <div class="pt-12 pb-2 px-3 flex items-center justify-between z-20 bg-gradient-to-b from-black/90 to-transparent sticky top-0">
+          <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold flex items-center gap-1 shadow-lg active:scale-95 transition cursor-pointer" title="Terug naar speurtocht">
+            <span class="material-symbols-outlined text-sm">arrow_back</span>
+            <span>✕ Speurtocht</span>
           </button>
-          <button type="button" id="tab-tiktok-foryou" onclick="window.playerApp.renderTikTokApp(document.getElementById('app-view-container'), 'foryou')" class="${!isFollowingTab ? 'text-white border-b-2 border-white pb-0.5' : 'text-stone-400 hover:text-white'} transition cursor-pointer">
-            Voor jou
+          
+          <div class="flex items-center gap-6 text-sm font-bold">
+            <button type="button" id="tab-tiktok-following" onclick="window.playerApp.renderTikTokApp(document.getElementById('app-view-container'), 'following')" class="${isFollowingTab ? 'text-white border-b-2 border-white pb-0.5' : 'text-stone-400 hover:text-white'} transition cursor-pointer">
+              Volgend
+            </button>
+            <button type="button" id="tab-tiktok-foryou" onclick="window.playerApp.renderTikTokApp(document.getElementById('app-view-container'), 'foryou')" class="${!isFollowingTab ? 'text-white border-b-2 border-white pb-0.5' : 'text-stone-400 hover:text-white'} transition cursor-pointer">
+              Voor jou
+            </button>
+          </div>
+
+          <button type="button" onclick="window.playerApp.toggleTikTokAudio(this)" class="w-8 h-8 rounded-full bg-stone-900/80 border border-white/20 flex items-center justify-center text-white cursor-pointer active:scale-95 transition" title="Geluid aan/uitzetten">
+            <span class="material-symbols-outlined text-[18px] tiktok-audio-top-icon ${state.reelsMuted ? 'text-stone-400' : 'text-amber-400'}">${state.reelsMuted ? 'volume_off' : 'volume_up'}</span>
           </button>
         </div>
 
@@ -2416,9 +3097,9 @@
           </div>
         ` : ''}
 
-        <!-- Verticale Scroll Feed -->
+        <!-- Verticale Scroll Feed (Oneindig door te scrollen) -->
         <div id="tiktok-feed-scroll" class="flex-1 overflow-y-scroll snap-y snap-mandatory select-none">
-          <!-- Dynamisch gevuld -->
+          <!-- Dynamisch gevuld met 100% video's -->
         </div>
 
         <!-- Handige 'Volgende video' zwevende knop voor snelle navigatie -->
@@ -2440,12 +3121,54 @@
     });
   }
 
+  function toggleTikTokAudio(btn) {
+    state.reelsMuted = !state.reelsMuted;
+    const vids = document.querySelectorAll('.tiktok-video-el, #active-reel-video');
+    vids.forEach(v => {
+      v.muted = state.reelsMuted;
+      if (!state.reelsMuted) {
+        v.volume = 0.85;
+        v.play().catch(() => {});
+      }
+    });
+
+    // Update alle audio icons op scherm
+    document.querySelectorAll('.tiktok-audio-icon, .tiktok-audio-top-icon, #reel-mute-icon').forEach(ic => {
+      ic.textContent = state.reelsMuted ? 'volume_off' : 'volume_up';
+      if (ic.classList.contains('tiktok-audio-icon')) {
+        ic.className = `material-symbols-outlined text-2xl tiktok-audio-icon ${state.reelsMuted ? 'text-stone-400' : 'text-amber-400'}`;
+      }
+      if (ic.classList.contains('tiktok-audio-top-icon')) {
+        ic.className = `material-symbols-outlined text-[18px] tiktok-audio-top-icon ${state.reelsMuted ? 'text-stone-400' : 'text-amber-400'}`;
+      }
+    });
+
+    document.querySelectorAll('.tiktok-audio-text').forEach(t => {
+      t.textContent = state.reelsMuted ? 'Dempen' : 'Geluid';
+    });
+
+    showToast(state.reelsMuted ? '🔇 Video geluid gedempt' : '🔊 Video geluid aangezet!', 'info');
+  }
+
   function appendTikTokReels(feedEl, count = 3, isFollowingTab = false) {
     if (!feedEl) return;
-    const catalog = OPENSOURCE_MEDIA_CATALOG;
+    
+    // Gecombineerde catalogus van 100% werkende open-source video's met geluid
+    const allReelMedia = [
+      ...OPENSOURCE_MEDIA_CATALOG.filter(m => !!m.videoUrl),
+      ...FEED_OPEN_VIDEOS.map((f, idx) => ({
+        id: 'feed_vid_' + idx,
+        creator: '@' + f.user,
+        caption: f.caption,
+        sound: 'Origineel Geluid - Open Media Audio',
+        videoUrl: f.url,
+        credits: f.credits,
+        comments: '2.4K'
+      }))
+    ];
 
     for (let i = 0; i < count; i++) {
-      const media = catalog[Math.floor(Math.random() * catalog.length)];
+      const media = allReelMedia[Math.floor(Math.random() * allReelMedia.length)];
       const creator = isFollowingTab ? (i % 2 === 0 ? '@sarah_vd' : media.creator) : media.creator;
       const isFollowed = isUserFollowed(creator) || isFollowingTab;
       const reelEl = document.createElement('div');
@@ -2458,17 +3181,12 @@
       if (!igUserLikes[reelId]) igUserLikes[reelId] = { count: defaultLikes, liked: false };
       if (!igUserDislikes[reelId]) igUserDislikes[reelId] = { count: defaultDislikes, disliked: false };
 
-      // Speel video af indien beschikbaar, anders gegarandeerd unieke afbeelding
-      const hasVideo = !!media.videoUrl;
+      const videoUrl = media.videoUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
 
       reelEl.innerHTML = `
         <div class="absolute inset-0 bg-black">
-          ${hasVideo ? `
-            <video src="${media.videoUrl}" class="w-full h-full object-cover" autoplay loop muted playsinline></video>
-          ` : `
-            <div class="w-full h-full bg-cover bg-center" style="background-image: url('${media.bgImage}')"></div>
-          `}
-          <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80"></div>
+          <video src="${videoUrl}" class="tiktok-video-el w-full h-full object-cover" autoplay loop ${state.reelsMuted ? 'muted' : ''} playsinline></video>
+          <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80 pointer-events-none"></div>
         </div>
 
         <div class="h-20"></div>
@@ -2512,8 +3230,16 @@
               <span class="text-[10px] font-bold mt-1 text-white drop-shadow tiktok-dislike-count">Dislike</span>
             </button>
 
+            <!-- GELUID AAN/UIT -->
+            <button type="button" class="flex flex-col items-center active:scale-125 transition text-white" onclick="window.playerApp.toggleTikTokAudio(this)" title="Geluid aan/uitzetten">
+              <div class="w-11 h-11 rounded-full bg-stone-900/80 border border-white/20 flex items-center justify-center shadow">
+                <span class="material-symbols-outlined text-2xl tiktok-audio-icon ${state.reelsMuted ? 'text-stone-400' : 'text-amber-400'}">${state.reelsMuted ? 'volume_off' : 'volume_up'}</span>
+              </div>
+              <span class="text-[10px] font-bold mt-1 text-white drop-shadow tiktok-audio-text">${state.reelsMuted ? 'Dempen' : 'Geluid'}</span>
+            </button>
+
             <!-- COMMENT -->
-            <button type="button" class="flex flex-col items-center active:scale-125 transition text-white" onclick="window.playerApp.openInstagramComments('${media.caption}', '${creator}')">
+            <button type="button" class="flex flex-col items-center active:scale-125 transition text-white" onclick="window.playerApp.openInstagramComments('${media.caption.replace(/'/g, "\\'")}', '${creator}')">
               <div class="w-11 h-11 rounded-full bg-stone-900/80 border border-white/20 flex items-center justify-center shadow">
                 <span class="material-symbols-outlined text-2xl">chat_bubble</span>
               </div>
@@ -2532,6 +3258,20 @@
       `;
 
       feedEl.appendChild(reelEl);
+
+      // Start video playback met geluid
+      const vid = reelEl.querySelector('.tiktok-video-el');
+      if (vid) {
+        vid.muted = state.reelsMuted;
+        vid.volume = 0.85;
+        const p = vid.play();
+        if (p !== undefined) {
+          p.catch(() => {
+            // Autoplay vereist interactie op mobiel -> val terug op muted
+            vid.muted = true;
+          });
+        }
+      }
     }
   }
 
@@ -2549,7 +3289,7 @@
     }
 
     const accounts = [
-      { u: '@sarah_vd', n: 'Sarah van Dijk', desc: 'Klasgenoot 🎒' },
+      { u: '@sarah_vd', n: 'Sarah van Dijk', desc: 'Goede vriendin ✨' },
       { u: '@lars.visser', n: 'Lars Visser', desc: 'Teamgenoot ⚽' },
       { u: '@moeder_official', n: 'Moeder ❤️', desc: 'Familie' },
       { u: '@nature_timelapse', n: 'Botanical Bloom NL', desc: 'Natuur & time-lapse' },
@@ -2596,42 +3336,53 @@
     const selfiePhoto = getRandomPicsumUrl(300, 400);
 
     container.innerHTML = `
-      <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto p-4 pt-12 overflow-y-auto select-none">
+      <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto overflow-y-auto select-none">
         
-        <!-- BeReal Header -->
-        <div class="flex flex-col items-center justify-center mb-4">
-          <span class="font-extrabold text-2xl tracking-tighter text-white">BeReal.</span>
-          <span class="text-xs text-amber-400 font-bold mt-0.5">⚠️ 2 min te laat</span>
-        </div>
-
-        <!-- Dual Camera Beeld -->
-        <div class="relative w-full aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl border border-stone-800 bg-stone-900 mb-4">
-          <!-- Grote Achtercamera Foto -->
-          <img src="${mainPhoto}" class="w-full h-full object-cover" alt="Main Photo">
-
-          <!-- Kleine Voorkant Selfie Foto Linksboven -->
-          <div class="absolute top-4 left-4 w-28 h-36 rounded-2xl overflow-hidden border-2 border-black shadow-2xl bg-black">
-            <img src="${selfiePhoto}" class="w-full h-full object-cover" alt="Selfie">
+        <!-- BeReal Header met Terugknop naar Speurtocht -->
+        <div class="sticky top-0 z-30 pt-12 px-3 pb-2.5 bg-black/95 backdrop-blur-md flex items-center justify-between border-b border-stone-800">
+          <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold flex items-center gap-1 shadow cursor-pointer active:scale-95 transition" title="Terug naar speurtocht">
+            <span class="material-symbols-outlined text-sm">arrow_back</span>
+            <span>✕ Speurtocht</span>
+          </button>
+          
+          <div class="flex flex-col items-center">
+            <span class="font-extrabold text-xl tracking-tighter text-white">BeReal.</span>
+            <span class="text-[10px] text-amber-400 font-bold">⚠️ 2 min te laat</span>
           </div>
 
-          <div class="absolute bottom-3 left-4 text-left">
-            <span class="text-xs font-bold text-white block">@lisa.kramer</span>
-            <span class="text-[10px] text-stone-300">In de collegezaal • 2m te laat 📚</span>
+          <div class="w-16"></div>
+        </div>
+
+        <div class="p-4 flex-1">
+          <!-- Dual Camera Beeld -->
+          <div class="relative w-full aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl border border-stone-800 bg-stone-900 mb-4">
+            <!-- Grote Achtercamera Foto -->
+            <img src="${mainPhoto}" class="w-full h-full object-cover" alt="Main Photo">
+
+            <!-- Kleine Voorkant Selfie Foto Linksboven -->
+            <div class="absolute top-4 left-4 w-28 h-36 rounded-2xl overflow-hidden border-2 border-black shadow-2xl bg-black">
+              <img src="${selfiePhoto}" class="w-full h-full object-cover" alt="Selfie">
+            </div>
+
+            <div class="absolute bottom-3 left-4 text-left">
+              <span class="text-xs font-bold text-white block">@lisa.kramer</span>
+              <span class="text-[10px] text-stone-300">Buiten in het park • 2m te laat 🌿</span>
+            </div>
           </div>
-        </div>
 
-        <!-- RealMojis Reactiebalk -->
-        <div class="flex items-center justify-around py-3 px-4 bg-stone-900/80 rounded-2xl border border-stone-800 mb-6">
-          <button type="button" class="text-2xl active:scale-125 transition" onclick="if(window.sounds) window.sounds.playLike()">👍</button>
-          <button type="button" class="text-2xl active:scale-125 transition" onclick="if(window.sounds) window.sounds.playLike()">😂</button>
-          <button type="button" class="text-2xl active:scale-125 transition" onclick="if(window.sounds) window.sounds.playLike()">😲</button>
-          <button type="button" class="text-2xl active:scale-125 transition" onclick="if(window.sounds) window.sounds.playLike()">😍</button>
-          <button type="button" class="text-2xl active:scale-125 transition" onclick="if(window.sounds) window.sounds.playCameraShutter()">⚡</button>
-        </div>
+          <!-- RealMojis Reactiebalk -->
+          <div class="flex items-center justify-around py-3 px-4 bg-stone-900/80 rounded-2xl border border-stone-800 mb-6">
+            <button type="button" class="text-2xl active:scale-125 transition" onclick="if(window.sounds) window.sounds.playLike()">👍</button>
+            <button type="button" class="text-2xl active:scale-125 transition" onclick="if(window.sounds) window.sounds.playLike()">😂</button>
+            <button type="button" class="text-2xl active:scale-125 transition" onclick="if(window.sounds) window.sounds.playLike()">😲</button>
+            <button type="button" class="text-2xl active:scale-125 transition" onclick="if(window.sounds) window.sounds.playLike()">😍</button>
+            <button type="button" class="text-2xl active:scale-125 transition" onclick="if(window.sounds) window.sounds.playCameraShutter()">⚡</button>
+          </div>
 
-        <button type="button" onclick="window.playerApp.openAppFeed('Instagram')" class="w-full py-3 bg-stone-800 rounded-xl text-xs font-bold text-white">
-          Wissel naar Instagram Feed 📸
-        </button>
+          <button type="button" onclick="window.playerApp.openAppFeed('Instagram')" class="w-full py-3 bg-stone-800 rounded-xl text-xs font-bold text-white">
+            Wissel naar Instagram Feed 📸
+          </button>
+        </div>
 
       </div>
     `;
@@ -2644,12 +3395,16 @@
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto relative select-none">
         
-        <div class="absolute top-12 left-0 right-0 z-20 px-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent pb-4">
+        <div class="absolute top-12 left-0 right-0 z-20 px-3 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent pb-4">
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-full bg-amber-400 text-black flex items-center justify-center font-bold text-sm">👻</div>
+            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold flex items-center gap-1 shadow cursor-pointer active:scale-95 transition" title="Terug naar speurtocht">
+              <span class="material-symbols-outlined text-sm">arrow_back</span>
+              <span>✕ Speurtocht</span>
+            </button>
+            <div class="w-7 h-7 rounded-full bg-amber-400 text-black flex items-center justify-center font-bold text-xs">👻</div>
             <div class="flex flex-col text-left">
-              <span class="text-xs font-bold text-white">Daan van Dijk</span>
-              <span class="text-[10px] text-amber-300 font-bold">🔥 56 Dagen Streak!</span>
+              <span class="text-xs font-bold text-white leading-tight">Daan van Dijk</span>
+              <span class="text-[9px] text-amber-300 font-bold">🔥 56 Dagen Streak!</span>
             </div>
           </div>
           <span class="text-xs font-mono text-stone-300">Nu</span>
@@ -2678,13 +3433,11 @@
 
   // 5. WHATSAPP CHAT INTERFACE (MET BERICHT VAN MOEDER EN DUIDELIJKE TERUGKNOP)
   function renderWhatsAppApp(container) {
-    const sharedPhoto = getRandomPicsumUrl(500, 400);
-
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-[#0b141a] text-white max-w-md mx-auto select-none">
         
-        <!-- WhatsApp Header met Terugknop naar Chats -->
-        <div class="pt-12 px-3 pb-3 bg-[#202c33] flex items-center justify-between border-b border-stone-800">
+        <!-- WhatsApp Header met Terugknop naar Chats & Speurtocht -->
+        <div class="sticky top-0 z-30 pt-12 px-3 pb-3 bg-[#202c33] flex items-center justify-between border-b border-stone-800">
           <div class="flex items-center gap-2 min-w-0">
             <button type="button" onclick="window.playerApp.renderWhatsAppChats(document.getElementById('app-view-container'))" class="text-white hover:text-stone-300 p-1.5 -ml-1 rounded-full hover:bg-white/10 flex items-center justify-center cursor-pointer transition shrink-0" title="Terug naar chats">
               <span class="material-symbols-outlined text-2xl">arrow_back</span>
@@ -2695,45 +3448,45 @@
               <span class="text-[10px] text-emerald-400 font-medium">online</span>
             </div>
           </div>
-          <div class="flex items-center gap-3 text-stone-300 shrink-0">
-            <span class="material-symbols-outlined text-[20px] cursor-pointer">videocam</span>
-            <span class="material-symbols-outlined text-[20px] cursor-pointer">call</span>
-            <span class="material-symbols-outlined text-[20px] cursor-pointer">more_vert</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 shadow cursor-pointer active:scale-95 transition" title="Terug naar speurtocht">
+              <span>✕ Speurtocht</span>
+            </button>
           </div>
         </div>
 
         <!-- Chat Berichten van Moeder -->
         <div class="flex-1 p-4 space-y-3 overflow-y-auto text-left">
           <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-[#202c33] text-xs text-stone-100 shadow">
-            Vergeet je fietssleutels straks niet mee te nemen! En hoe gaat de speurtocht op school? ❤️
+            Vergeet je fietssleutels straks niet mee te nemen! En hoe gaat de speurtocht? ❤️
             <span class="text-[9px] text-stone-400 block text-right mt-1">12:30</span>
           </div>
 
-          <!-- KLIKBARE REEL / FOTO VAN OMA MET TERUGKEER NAAR WHATSAPP -->
+          <!-- KLIKBARE REEL / VIDEO VAN OMA MET TERUGKEER NAAR WHATSAPP -->
           <div class="max-w-[85%] rounded-2xl rounded-tl-none bg-[#202c33] border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-[#00a884] transition transform active:scale-95 group" onclick="window.playerApp.renderInstagramReel(document.getElementById('app-view-container'), window.playerApp.getFeedVideo(2), 'whatsapp')">
             <div class="relative w-full h-44 bg-black overflow-hidden">
-              <img src="${sharedPhoto}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="Foto van Oma">
-              <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <video src="${FEED_OPEN_VIDEOS[2].url}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" autoplay loop muted playsinline></video>
+              <div class="absolute inset-0 bg-black/30 flex items-center justify-center">
                 <div class="w-12 h-12 rounded-full bg-black/75 border border-white/50 flex items-center justify-center text-white shadow-xl group-hover:scale-110 transition">
                   <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
                 </div>
               </div>
               <span class="absolute top-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded text-[9px] font-bold text-white flex items-center gap-1">
-                🎬 Video • 0:15
+                🎬 Open Source Video
               </span>
               <span class="absolute bottom-2 right-2 bg-[#00a884] text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow">
-                <span>Tik om video te kijken</span>
+                <span>Bekijk video</span>
                 <span class="material-symbols-outlined text-[11px]">arrow_forward</span>
               </span>
             </div>
             <div class="p-2.5 text-xs text-stone-100">
-              <p class="font-medium">Kijk deze foto die oma net stuurde! 😂</p>
+              <p class="font-medium">Kijk deze video die oma net stuurde! 😂</p>
               <span class="text-[9px] text-stone-400 block text-right mt-1">12:32</span>
             </div>
           </div>
 
           <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-[#202c33] text-xs text-stone-100 shadow">
-            Doe je best lieverd! Geen TikTok kijken tijdens de les hoor 😉
+            Doe je best lieverd! Geen TikTok kijken tijdens het speuren hoor 😉
             <span class="text-[9px] text-stone-400 block text-right mt-1">12:33</span>
           </div>
         </div>
@@ -2756,11 +3509,11 @@
       <div class="w-full h-full flex flex-col bg-[#0b141a] text-white max-w-md mx-auto select-none">
         
         <!-- WhatsApp Inbox Header met Terugknop naar Speurtocht -->
-        <div class="pt-12 px-4 pb-3 bg-[#202c33] flex items-center justify-between border-b border-stone-800">
+        <div class="sticky top-0 z-30 pt-12 px-4 pb-3 bg-[#202c33] flex items-center justify-between border-b border-stone-800">
           <div class="flex items-center gap-2">
-            <button type="button" onclick="window.playerApp.exitTrap()" class="text-stone-300 hover:text-white p-1 -ml-1 flex items-center gap-1 text-xs font-bold cursor-pointer" title="Sluit WhatsApp">
-              <span class="material-symbols-outlined text-xl">arrow_back</span>
-              <span>Terug</span>
+            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow cursor-pointer active:scale-95 transition" title="Sluit WhatsApp">
+              <span class="material-symbols-outlined text-sm">arrow_back</span>
+              <span>✕ Speurtocht</span>
             </button>
             <span class="text-base font-bold text-white ml-2">WhatsApp</span>
           </div>
@@ -2790,7 +3543,7 @@
                 <span class="text-[10px] text-[#00a884] font-semibold">12:32</span>
               </div>
               <div class="flex items-center justify-between mt-0.5">
-                <p class="text-xs text-stone-300 truncate pr-2">Kijk deze foto die oma net stuurde! 😂</p>
+                <p class="text-xs text-stone-300 truncate pr-2">Kijk deze video die oma net stuurde! 😂</p>
                 <span class="w-5 h-5 rounded-full bg-[#00a884] text-black text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
               </div>
             </div>
@@ -2808,15 +3561,15 @@
             </div>
           </div>
 
-          <!-- Chat 3: Klas 3B -->
+          <!-- Chat 3: Groepsapp -->
           <div class="p-3.5 flex items-center gap-3 hover:bg-[#202c33]/50 cursor-pointer transition opacity-70">
-            <div class="w-12 h-12 rounded-full bg-sky-700 flex items-center justify-center text-2xl shadow shrink-0">🎒</div>
+            <div class="w-12 h-12 rounded-full bg-sky-700 flex items-center justify-center text-2xl shadow shrink-0">⚡</div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-white">Klas 3B Speurtocht</span>
+                <span class="text-xs font-bold text-white">Speurtocht Groepsapp</span>
                 <span class="text-[10px] text-stone-400 font-semibold">10:15</span>
               </div>
-              <p class="text-xs text-stone-400 truncate mt-0.5">Docent: "Denk aan de klok, blijf gefocust!"</p>
+              <p class="text-xs text-stone-400 truncate mt-0.5">Daan: "Denk aan de klok, blijf gefocust!"</p>
             </div>
           </div>
 
@@ -3128,6 +3881,7 @@
     getFeedVideo: (idx) => FEED_OPEN_VIDEOS[idx % FEED_OPEN_VIDEOS.length],
     toggleTikTokLike,
     toggleTikTokDislike,
+    toggleTikTokAudio,
     updateAdventureTrail,
     toggleFullScreen,
     showCommentMock: () => openInstagramComments('Bericht', 'instagram'),

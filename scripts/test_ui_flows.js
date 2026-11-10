@@ -66,8 +66,8 @@ console.log('✓ Profiel "Volgend" opent lijst met gevolgde accounts:', hasProfi
 
 // 8. Controleer Cache Busters
 console.log('\n[Check 8] Cache Busters in index.html:');
-const isCacheV14 = indexHtml.includes('?v=14') && indexHtml.includes('doomscroll-escape-v14');
-console.log('✓ Alle scripts geüpgraded naar ?v=14 en service worker v14:', isCacheV14);
+const isCacheV16 = indexHtml.includes('?v=16') && indexHtml.includes('doomscroll-escape-v16');
+console.log('✓ Alle scripts geüpgraded naar ?v=16 en service worker v16:', isCacheV16);
 
 // 9. Controleer Like, Dislike, Oma Foto Reel en Stippellijn
 console.log('\n[Check 9] Like/Dislike, Klikbare Oma Foto en Stippellijn door alle objectives:');
@@ -90,5 +90,51 @@ console.log('✓ Knop in gameplay header aanwezig:', hasFsToggleBtn);
 console.log('✓ Knop in login scherm aanwezig:', hasFsLoginBtn);
 console.log('✓ Knop in lobby scherm aanwezig:', hasFsLobbyBtn);
 console.log('✓ Fullscreen handler en toggleFullScreen functie aanwezig:', hasFsLogic);
+
+// 11. Controleer Captcha Taken voor Verborgen Locaties
+console.log('\n[Check 11] Captcha Taken voor Verborgen Locaties:');
+const hasCaptchaModal = playerAppJs.includes('openCaptchaLocationModal');
+const hasRotateCaptcha = playerAppJs.includes('renderRotateCaptcha');
+const hasTextCaptcha = playerAppJs.includes('renderTextCaptcha');
+const hasSliderCaptcha = playerAppJs.includes('renderSliderCaptcha');
+const hasGridCaptcha = playerAppJs.includes('renderGridCaptcha');
+const hasCaptchaSuccess = playerAppJs.includes('onCaptchaSuccess');
+console.log('✓ Captcha Modal aanwezig:', hasCaptchaModal);
+console.log('✓ Rotatie Captcha (date):', hasRotateCaptcha);
+console.log('✓ Tekst Captcha (job_interview):', hasTextCaptcha);
+console.log('✓ Schuifpuzzel Captcha (job_raise):', hasSliderCaptcha);
+console.log('✓ 3x3 Raster Captcha (trouwen):', hasGridCaptcha);
+console.log('✓ OnCaptchaSuccess toont geheime vindplek:', hasCaptchaSuccess);
+
+// 12. Controleer Exclusieve Follow-up Items & Random Kaart Route
+console.log('\n[Check 12] Exclusieve Follow-up Items & Random Kaart Route:');
+const serverJs = fs.readFileSync('server.js', 'utf8');
+const hasFollowUpExclusivity = serverJs.includes('eligiblePlayerId') && playerAppJs.includes('Alleen voor');
+const hasRandomizedCardOrder = playerAppJs.includes('getPlayerCardOrder') && playerAppJs.includes('state.cardOrder');
+console.log('✓ Server & client exclusiviteit voor follow-up items (job_raise & trouwen):', hasFollowUpExclusivity);
+console.log('✓ Deterministic shuffle route per speler (getPlayerCardOrder):', hasRandomizedCardOrder);
+
+// 13. Controleer Verwijdering Schoolthema
+console.log('\n[Check 13] Verwijdering Schoolthema:');
+const hasNoSchoolReferences = !playerAppJs.includes('speurtocht op school') &&
+  !playerAppJs.includes('tijdens de les') &&
+  !playerAppJs.includes('Klasgenoot 🎒') &&
+  !playerAppJs.includes('Docent:') &&
+  !playerAppJs.includes('Klas 3B Speurtocht');
+console.log('✓ Geen school/docent/klas referenties in chats & social feeds:', hasNoSchoolReferences);
+
+// 14. Controleer Lobby Start Tekst en Direct Start Knop
+console.log('\n[Check 14] Lobby Start Tekst en Direct Start Knop:');
+const hasLobbyStartText = indexHtml.includes('Het spel start over een dadelijk moment.') &&
+  indexHtml.includes('id="btn-lobby-start-direct"') &&
+  playerAppJs.includes('btn-lobby-start-direct');
+console.log('✓ Lobby toont "Het spel start over een dadelijk moment." en startknop:', hasLobbyStartText);
+
+// 15. Controleer Endless Reels met Audio & Zuiver Video's
+console.log('\n[Check 15] Reels 100% Video met Geluid:');
+const hasStrictVideos = !playerAppJs.includes("${hasVideo ?") &&
+  playerAppJs.includes('toggleTikTokAudio') &&
+  playerAppJs.includes('tiktok-video-el');
+console.log('✓ TikTok reels gebruiken strikt videos met audio toggle:', hasStrictVideos);
 
 console.log('\n--- ALLE CONTROLES MET SUCCES AFGEROND! ---');

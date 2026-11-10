@@ -125,9 +125,10 @@ const INITIAL_LIMITED_ITEMS = {
   job_interview: {
     id: 'job_interview',
     name: 'Job Interview',
-    location: 'Kantoor 302',
+    location: '❓ Verborgen (Los taak op)',
+    secretLocation: 'Kantoor 302',
     points: 1,
-    code: '4343',
+    code: '2413',
     isLimited: true,
     claimedBy: null,
     claimedByName: null,
@@ -136,12 +137,15 @@ const INITIAL_LIMITED_ITEMS = {
   job_raise: {
     id: 'job_raise',
     name: 'Job Raise',
-    location: 'Kantoor 302',
+    location: '❓ Verborgen (Los taak op)',
+    secretLocation: 'Directiekamer 401',
     points: 1,
     code: '1243',
     isLimited: true,
     isLocked: true,
-    unlockCountdown: 60, // 1 minuut na claimen interview
+    eligiblePlayerId: null,
+    eligiblePlayerName: null,
+    unlockCountdown: 60, // 1 minuut na claimen interview (alleen voor de winnaar)
     claimedBy: null,
     claimedByName: null,
     claimedAt: null
@@ -149,7 +153,8 @@ const INITIAL_LIMITED_ITEMS = {
   date: {
     id: 'date',
     name: 'Date',
-    location: 'Kantine Terras',
+    location: '❓ Verborgen (Los taak op)',
+    secretLocation: 'Kantine Terras',
     points: 1,
     code: '3442',
     isLimited: true,
@@ -160,12 +165,15 @@ const INITIAL_LIMITED_ITEMS = {
   trouwen: {
     id: 'trouwen',
     name: 'Trouwen',
-    location: 'Trouwzaal / Aula',
+    location: '❓ Verborgen (Los taak op)',
+    secretLocation: 'Trouwzaal / Aula',
     points: 1,
     code: '3443',
     isLimited: true,
     isLocked: true,
-    unlockCountdown: 60, // 1 minuut na voltooien date
+    eligiblePlayerId: null,
+    eligiblePlayerName: null,
+    unlockCountdown: 60, // 1 minuut na voltooien date (alleen voor de winnaar)
     claimedBy: null,
     claimedByName: null,
     claimedAt: null
@@ -677,6 +685,32 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Exclusiviteit follow-up items controleren:
+    // Job Raise mag ALLEEN geclaimd worden door de speler die het Job Interview heeft behaald
+    if (itemId === 'job_raise') {
+      const interviewClaimedBy = gameState.limitedItems.job_interview?.claimedBy;
+      const interviewWinnerName = gameState.limitedItems.job_interview?.claimedByName || 'de winnaar van het Job Interview';
+      if (!interviewClaimedBy || socket.data.playerId !== interviewClaimedBy) {
+        if (callback) callback({
+          success: false,
+          error: `🔒 Alleen ${interviewWinnerName} (winnaar van het Job Interview) kan de Job Raise claimen!`
+        });
+        return;
+      }
+    }
+    // Trouwen mag ALLEEN geclaimd worden door de speler die de Date heeft behaald
+    if (itemId === 'trouwen') {
+      const dateClaimedBy = gameState.limitedItems.date?.claimedBy;
+      const dateWinnerName = gameState.limitedItems.date?.claimedByName || 'de winnaar van de Date';
+      if (!dateClaimedBy || socket.data.playerId !== dateClaimedBy) {
+        if (callback) callback({
+          success: false,
+          error: `🔒 Alleen ${dateWinnerName} (winnaar van de Date) kan gaan Trouwen!`
+        });
+        return;
+      }
+    }
+
     if (cleanCode === targetItem.code) {
       if (callback) callback({ success: true, message: 'Code correct!' });
     } else {
@@ -701,6 +735,30 @@ io.on('connection', (socket) => {
     if (!itemData) {
       if (callback) callback({ success: false, error: 'Onbekend item.' });
       return;
+    }
+
+    // Exclusiviteit follow-up items controleren:
+    if (itemId === 'job_raise') {
+      const interviewClaimedBy = gameState.limitedItems.job_interview?.claimedBy;
+      const interviewWinnerName = gameState.limitedItems.job_interview?.claimedByName || 'de winnaar van het Job Interview';
+      if (!interviewClaimedBy || playerId !== interviewClaimedBy) {
+        if (callback) callback({
+          success: false,
+          error: `🔒 Alleen ${interviewWinnerName} (winnaar van het Job Interview) kan de Job Raise claimen!`
+        });
+        return;
+      }
+    }
+    if (itemId === 'trouwen') {
+      const dateClaimedBy = gameState.limitedItems.date?.claimedBy;
+      const dateWinnerName = gameState.limitedItems.date?.claimedByName || 'de winnaar van de Date';
+      if (!dateClaimedBy || playerId !== dateClaimedBy) {
+        if (callback) callback({
+          success: false,
+          error: `🔒 Alleen ${dateWinnerName} (winnaar van de Date) kan gaan Trouwen!`
+        });
+        return;
+      }
     }
 
     // Controleer of limited item al gekaapt is
@@ -745,25 +803,37 @@ io.on('connection', (socket) => {
           toastMessage: `${player.name} heeft de laatste ${itemData.name} gepakt!`
         });
 
-        // Als dit het Job Interview is, ontgrendel Job Raise na 60 seconden
+        // Als dit het Job Interview is, ontgrendel Job Raise na 60 seconden exclusief voor deze winnaar
         if (itemId === 'job_interview') {
+          if (gameState.limitedItems.job_raise) {
+            gameState.limitedItems.job_raise.eligiblePlayerId = playerId;
+            gameState.limitedItems.job_raise.eligiblePlayerName = player.name;
+          }
           gameState.jobRaiseUnlockTimerActive = true;
           gameState.jobRaiseUnlockSecondsLeft = 60;
-          addActivityLog('⏱️ Timer gestart: Job Raise ontgrendelt over 1 minuut!', 'info');
+          addActivityLog(`⏱️ Timer gestart: Job Raise ontgrendelt over 1 minuut (exclusief voor ${player.name})!`, 'info');
           io.emit('item:unlock_countdown_started', {
             itemId: 'job_raise',
             secondsLeft: 60,
-            message: 'Job Raise ontgrendelt over 1 minuut! Houd de kaart in de gaten.'
+            eligiblePlayerId: playerId,
+            eligiblePlayerName: player.name,
+            message: `Job Raise ontgrendelt over 1 minuut exclusief voor ${player.name}! Houd de kaart in de gaten.`
           });
         } else if (itemId === 'date') {
-          // Date behaald -> Trouwen ontgrendelt na 60 seconden
+          // Date behaald -> Trouwen ontgrendelt na 60 seconden exclusief voor deze winnaar
+          if (gameState.limitedItems.trouwen) {
+            gameState.limitedItems.trouwen.eligiblePlayerId = playerId;
+            gameState.limitedItems.trouwen.eligiblePlayerName = player.name;
+          }
           gameState.trouwenUnlockTimerActive = true;
           gameState.trouwenUnlockSecondsLeft = 60;
-          addActivityLog('⏱️ Timer gestart: Trouwen ontgrendelt over 1 minuut!', 'info');
+          addActivityLog(`⏱️ Timer gestart: Trouwen ontgrendelt over 1 minuut (exclusief voor ${player.name})!`, 'info');
           io.emit('item:unlock_countdown_started', {
             itemId: 'trouwen',
             secondsLeft: 60,
-            message: '💍 De date was een succes! "Trouwen" ontgrendelt over 1 minuut op de kaart!'
+            eligiblePlayerId: playerId,
+            eligiblePlayerName: player.name,
+            message: `💍 De date was een succes! "Trouwen" ontgrendelt over 1 minuut exclusief voor ${player.name}!`
           });
         }
       } else {
