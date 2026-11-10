@@ -12,8 +12,8 @@
   // Veilige fallback zodat UI en knoppen ALTIJD blijven werken
   if (!socket) {
     socket = {
-      on: () => {},
-      emit: () => {},
+      on: () => { },
+      emit: () => { },
       data: {}
     };
   }
@@ -373,9 +373,8 @@
       const btn = document.createElement('button');
       btn.type = 'button';
       const isSelected = state.playerAvatar === av;
-      btn.className = `avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center transition cursor-pointer ${
-        isSelected ? 'bg-white shadow-sm ring-2 ring-primary scale-105' : 'hover:bg-white/80'
-      }`;
+      btn.className = `avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center transition cursor-pointer ${isSelected ? 'bg-white shadow-sm ring-2 ring-primary scale-105' : 'hover:bg-white/80'
+        }`;
       btn.textContent = av;
       btn.onclick = (e) => {
         e.preventDefault();
@@ -1988,7 +1987,7 @@
     if (window.sounds) window.sounds.playClick();
     document.querySelectorAll('video').forEach(v => {
       v.pause();
-      try { v.currentTime = 0; } catch(e) {}
+      try { v.currentTime = 0; } catch (e) { }
     });
     if (tiktokObserver) {
       tiktokObserver.disconnect();
@@ -2792,7 +2791,7 @@
       if (data && data.success && Array.isArray(data.reels) && data.reels.length > 0) {
         return data.reels;
       }
-    } catch(e) {
+    } catch (e) {
       console.warn('API error, using local infinite generator:', e);
     }
 
@@ -2969,23 +2968,23 @@
           feedEl.querySelectorAll('.reel-video-el').forEach(other => {
             if (other !== vid) {
               other.pause();
-              try { other.currentTime = 0; } catch(e) {}
+              try { other.currentTime = 0; } catch (e) { }
             }
           });
 
-          try { vid.currentTime = 0; } catch(e) {}
+          try { vid.currentTime = 0; } catch (e) { }
           vid.muted = state.reelsMuted;
           vid.volume = 0.25;
           const p = vid.play();
           if (p !== undefined) {
             p.catch(() => {
               vid.muted = true;
-              vid.play().catch(() => {});
+              vid.play().catch(() => { });
             });
           }
         } else if (entry.intersectionRatio < 0.2) {
           vid.pause();
-          try { vid.currentTime = 0; } catch(e) {}
+          try { vid.currentTime = 0; } catch (e) { }
         }
       });
     }, {
@@ -3117,8 +3116,8 @@
         <!-- Explore Grid van Dynamische Video's -->
         <div class="flex-1 overflow-y-auto grid grid-cols-3 gap-0.5 pb-20">
           ${Array.from({ length: 15 }).map((_, idx) => {
-            const vData = FEED_OPEN_VIDEOS[idx % FEED_OPEN_VIDEOS.length];
-            return `
+      const vData = FEED_OPEN_VIDEOS[idx % FEED_OPEN_VIDEOS.length];
+      return `
               <div class="aspect-square bg-stone-950 overflow-hidden relative cursor-pointer group hover:opacity-90 transition active:scale-95" onclick="window.playerApp.openReelFromFeed(${idx % FEED_OPEN_VIDEOS.length})">
                 <video src="${vData.url}" class="w-full h-full object-cover pointer-events-none" muted loop playsinline autoplay preload="metadata"></video>
                 <div class="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition"></div>
@@ -3126,7 +3125,7 @@
                 <span class="absolute bottom-1 left-1.5 text-[9px] font-bold text-white/90 drop-shadow truncate max-w-[85%] pointer-events-none">@${vData.user}</span>
               </div>
             `;
-          }).join('')}
+    }).join('')}
         </div>
 
         <!-- Bottom Nav -->
@@ -3340,24 +3339,24 @@
           feedEl.querySelectorAll('.tiktok-video-el, .reel-video-el').forEach(other => {
             if (other !== vid) {
               other.pause();
-              try { other.currentTime = 0; } catch(e) {}
+              try { other.currentTime = 0; } catch (e) { }
             }
           });
 
           // Actieve video start altijd vanaf begin (0s) samen met audio
-          try { vid.currentTime = 0; } catch(e) {}
+          try { vid.currentTime = 0; } catch (e) { }
           vid.muted = state.reelsMuted;
           vid.volume = 0.25;
           const p = vid.play();
           if (p !== undefined) {
             p.catch(() => {
               vid.muted = true;
-              vid.play().catch(() => {});
+              vid.play().catch(() => { });
             });
           }
         } else if (entry.intersectionRatio < 0.2) {
           vid.pause();
-          try { vid.currentTime = 0; } catch(e) {}
+          try { vid.currentTime = 0; } catch (e) { }
         }
       });
     }, {
@@ -3456,7 +3455,7 @@
       v.muted = state.reelsMuted;
       if (!state.reelsMuted) {
         v.volume = 0.25;
-        v.play().catch(() => {});
+        v.play().catch(() => { });
       }
     });
 
@@ -3530,8 +3529,8 @@
 
       <div class="flex-1 overflow-y-auto p-4 space-y-3 divide-y divide-stone-900">
         ${accounts.map(acc => {
-          const isF = isUserFollowed(acc.u);
-          return `
+      const isF = isUserFollowed(acc.u);
+      return `
             <div class="pt-2.5 flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-stone-800 flex items-center justify-center font-bold text-sm">
@@ -3547,7 +3546,7 @@
               </button>
             </div>
           `;
-        }).join('')}
+    }).join('')}
       </div>
     `;
   }
@@ -3825,17 +3824,17 @@
         <!-- Chat Berichten -->
         <div class="flex-1 p-4 space-y-3 overflow-y-auto text-left">
           ${chat.messages.map(m => {
-            if (m.type === 'text') {
-              return `
+      if (m.type === 'text') {
+        return `
                 <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-[#202c33] text-xs text-stone-100 shadow">
                   ${m.sender && m.sender !== 'them' ? `<span class="text-[11px] font-bold text-[#00a884] block mb-0.5">${m.sender}</span>` : ''}
                   ${m.text}
                   <span class="text-[9px] text-stone-400 block text-right mt-1">${m.time}</span>
                 </div>
               `;
-            } else if (m.type === 'video') {
-              const vObj = FEED_OPEN_VIDEOS[m.videoIndex % FEED_OPEN_VIDEOS.length];
-              return `
+      } else if (m.type === 'video') {
+        const vObj = FEED_OPEN_VIDEOS[m.videoIndex % FEED_OPEN_VIDEOS.length];
+        return `
                 <div class="max-w-[85%] rounded-2xl rounded-tl-none bg-[#202c33] border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-[#00a884] transition transform active:scale-95 group" onclick="window.playerApp.openReelFromChat(${m.videoIndex}, 'whatsapp', '${chat.id}')">
                   <div class="relative w-full h-44 bg-black overflow-hidden">
                     <video src="${vObj.url}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" autoplay loop muted playsinline></video>
@@ -3858,9 +3857,9 @@
                   </div>
                 </div>
               `;
-            }
-            return '';
-          }).join('')}
+      }
+      return '';
+    }).join('')}
         </div>
 
         <!-- Input balk -->
@@ -3878,7 +3877,7 @@
   function exitTrap() {
     document.querySelectorAll('video').forEach(v => {
       v.pause();
-      try { v.currentTime = 0; } catch(e) {}
+      try { v.currentTime = 0; } catch (e) { }
     });
     if (tiktokObserver) {
       tiktokObserver.disconnect();
@@ -3967,7 +3966,7 @@
       const isNativeFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
       if (isZoomedActive && !isNativeFs) {
         if (docEl.requestFullscreen) {
-          docEl.requestFullscreen().catch(() => {});
+          docEl.requestFullscreen().catch(() => { });
         } else if (docEl.webkitRequestFullscreen) {
           docEl.webkitRequestFullscreen();
         } else if (document.body.webkitRequestFullscreen) {
@@ -3975,7 +3974,7 @@
         }
       } else if (!isZoomedActive && isNativeFs) {
         if (document.exitFullscreen) {
-          document.exitFullscreen().catch(() => {});
+          document.exitFullscreen().catch(() => { });
         } else if (document.webkitExitFullscreen) {
           document.webkitExitFullscreen();
         }
