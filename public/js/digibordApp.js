@@ -515,10 +515,24 @@
   function renderLobbyPlayers() {
     const grid = document.getElementById('lobby-players-grid');
     const badge = document.getElementById('lobby-player-count-badge');
+    const btnClear = document.getElementById('btn-clear-lobby');
     if (!grid) return;
 
     const count = state.leaderboard.length;
     badge.textContent = `${count} Speler${count === 1 ? '' : 's'}`;
+
+    if (btnClear) {
+      if (count > 0) {
+        btnClear.classList.remove('hidden');
+        btnClear.onclick = () => {
+          if (confirm(`Weet je zeker dat je alle ${count} spelers wilt verwijderen uit de lobby?`)) {
+            socket.emit('admin:clear_lobby_players');
+          }
+        };
+      } else {
+        btnClear.classList.add('hidden');
+      }
+    }
 
     if (count === 0) {
       grid.innerHTML = `
@@ -532,17 +546,34 @@
     grid.innerHTML = '';
     state.leaderboard.forEach(p => {
       const card = document.createElement('div');
-      card.className = 'bg-stone-800/90 p-3 rounded-xl border border-stone-700 flex items-center gap-2.5 shadow-sm animate-in fade-in duration-200';
+      card.className = 'bg-stone-800/90 p-3 rounded-xl border border-stone-700 flex items-center justify-between gap-2.5 shadow-sm animate-in fade-in duration-200 group hover:border-stone-600';
       card.innerHTML = `
-        <span class="text-2xl">${p.avatar}</span>
-        <div class="flex flex-col min-w-0">
-          <span class="text-xs font-bold text-white truncate">${p.name}</span>
-          <span class="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Klaar
-          </span>
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="text-2xl shrink-0">${p.avatar}</span>
+          <div class="flex flex-col min-w-0">
+            <span class="text-xs font-bold text-white truncate" title="${p.name}">${p.name}</span>
+            <span class="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Klaar
+            </span>
+          </div>
         </div>
+        <button type="button" class="btn-kick-player p-1.5 rounded-lg text-stone-400 hover:text-rose-400 hover:bg-rose-950/60 border border-transparent hover:border-rose-700/50 transition cursor-pointer shrink-0" title="Verwijder ${p.name} uit lobby" data-player-id="${p.id}" data-player-name="${p.name}">
+          <span class="material-symbols-outlined text-[18px]">person_remove</span>
+        </button>
       `;
       grid.appendChild(card);
+    });
+
+    // Koppel verwijder-knoppen
+    grid.querySelectorAll('.btn-kick-player').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pId = btn.dataset.playerId;
+        const pName = btn.dataset.playerName;
+        if (confirm(`Weet je zeker dat je "${pName}" wilt verwijderen uit de lobby?`)) {
+          socket.emit('admin:remove_player', { playerId: pId });
+        }
+      });
     });
   }
 

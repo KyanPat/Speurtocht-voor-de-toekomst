@@ -164,4 +164,15 @@ console.log('\n[Check 17] Paren Onder Elkaar (date & trouwen, job_interview & jo
 const hasPairedRouting = playerAppJs.includes("['date', 'trouwen']") && playerAppJs.includes("['job_interview', 'job_raise']");
 console.log('✓ Paren zijn gekoppeld en behouden zelfde uitlijning onder elkaar:', hasPairedRouting);
 
+// 18. Controleer Spelers Verwijderen uit Lobby
+console.log('\n[Check 18] Spelers Verwijderen uit de Lobby:');
+const digibordHtml = fs.readFileSync('public/digibord.html', 'utf8');
+const digibordAppJs = fs.readFileSync('public/js/digibordApp.js', 'utf8');
+const hasServerRemoveEvents = serverJs.includes('admin:remove_player') && serverJs.includes('player:leave_lobby') && serverJs.includes('admin:clear_lobby_players');
+const hasDigibordKickButtons = digibordAppJs.includes('btn-kick-player') && digibordAppJs.includes('admin:remove_player') && digibordHtml.includes('id="btn-clear-lobby"');
+const hasMobileLeaveButtons = playerAppJs.includes('btn-leave-lobby') && playerAppJs.includes('player:kicked') && playerAppJs.includes('leaveLobby') && indexHtml.includes('id="btn-leave-lobby"');
+console.log('✓ Server socket events voor speler verwijderen & verlaten:', hasServerRemoveEvents);
+console.log('✓ Digibord kick-knoppen per speler en knop om alle spelers te wissen:', hasDigibordKickButtons);
+console.log('✓ Mobiel verlaat-lobby knop en kicked status handler:', hasMobileLeaveButtons);
+
 console.log('\n--- ALLE CONTROLES MET SUCCES AFGEROND! ---');

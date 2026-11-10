@@ -161,9 +161,14 @@
         <div class="w-full max-w-2xl mb-8 text-left">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold text-stone-400 uppercase tracking-wider">Aangemelde Spelers in de Lobby</span>
-            <span id="lobby-player-count-badge" class="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-700/50 text-xs font-mono font-bold">
-              0 Spelers
-            </span>
+            <div class="flex items-center gap-2">
+              <button id="btn-clear-lobby" type="button" class="hidden text-xs text-rose-400 hover:text-rose-300 underline font-semibold flex items-center gap-1 cursor-pointer">
+                <span class="material-symbols-outlined text-[14px]">delete_sweep</span> Alle spelers verwijderen
+              </button>
+              <span id="lobby-player-count-badge" class="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-700/50 text-xs font-mono font-bold">
+                0 Spelers
+              </span>
+            </div>
           </div>
           <div id="lobby-players-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 min-h-[70px] bg-stone-900/60 p-4 rounded-2xl border border-stone-800">
             <!-- Dynamisch gevuld met speler kaarten -->

@@ -674,6 +674,59 @@ io.on('connection', (socket) => {
     broadcastFullState();
   });
 
+  // SPELER VERWIJDEREN UIT DE LOBBY (DOOR SPELLEIDER)
+  socket.on('admin:remove_player', (data) => {
+    const playerId = typeof data === 'string' ? data : data?.playerId;
+    if (!playerId) return;
+
+    const player = gameState.players[playerId];
+    if (player) {
+      const playerName = player.name;
+      const targetSocketId = player.socketId;
+
+      delete gameState.players[playerId];
+      addActivityLog(`${playerName} is verwijderd uit de lobby door de spelleider.`, 'info');
+
+      if (targetSocketId && targetSocketId !== 'bot') {
+        io.to(targetSocketId).emit('player:kicked', {
+          reason: 'Je bent uit de lobby verwijderd door de spelleider.'
+        });
+      }
+
+      broadcastFullState();
+    }
+  });
+
+  // ALLE SPELERS VERWIJDEREN UIT DE LOBBY (RESET LOBBY)
+  socket.on('admin:clear_lobby_players', () => {
+    const playerList = Object.values(gameState.players);
+    playerList.forEach(p => {
+      if (p.socketId && p.socketId !== 'bot') {
+        io.to(p.socketId).emit('player:kicked', {
+          reason: 'De lobby is leeggemaakt door de spelleider.'
+        });
+      }
+    });
+
+    gameState.players = {};
+    addActivityLog('Alle spelers zijn verwijderd uit de lobby.', 'info');
+    broadcastFullState();
+  });
+
+  // SPELER VERLAAT ZELF DE LOBBY (MOBIELE APP)
+  socket.on('player:leave_lobby', (data) => {
+    const playerId = socket.data?.playerId || data?.playerId;
+    if (playerId && gameState.players[playerId]) {
+      const playerName = gameState.players[playerId].name;
+      delete gameState.players[playerId];
+      addActivityLog(`${playerName} heeft de lobby verlaten.`, 'info');
+      socket.emit('player:kicked', {
+        reason: 'Je hebt de lobby verlaten.'
+      });
+      broadcastFullState();
+    }
+  });
+
   // SPELACTIE: CODE VERIFIËREN
   socket.on('item:verify_code', (data, callback) => {
     const { itemId, code } = data;

@@ -259,8 +259,33 @@
       window.notifications.show(matchedNotif);
     });
 
+    // Verwijderd uit lobby (door spelleider of zelf verlaten)
+    socket.on('player:kicked', (data) => {
+      handlePlayerKicked(data?.reason || 'Je bent verwijderd uit de lobby.');
+    });
+
     // Herstel schermstatus bij herladen
     updateScreenVisibility(state.gameStatus);
+  }
+
+  function handlePlayerKicked(reason) {
+    state.playerId = null;
+    state.playerName = null;
+    localStorage.removeItem('doomscroll_playerId');
+    localStorage.removeItem('doomscroll_playerName');
+    const input = document.getElementById('player-name-input');
+    if (input) input.value = '';
+    closeModal();
+    if (screens.doomscrollTrap) screens.doomscrollTrap.classList.add('hidden');
+    showScreen('login');
+    if (reason) showToast(reason, 'info');
+    if (window.sounds) window.sounds.playError();
+  }
+
+  function leaveLobby() {
+    if (window.sounds) window.sounds.playClick();
+    socket.emit('player:leave_lobby', { playerId: state.playerId });
+    handlePlayerKicked('Je hebt de lobby verlaten.');
   }
 
   // ==========================================
@@ -360,6 +385,13 @@
       if (e.key === 'Enter') handleJoin();
     });
 
+    const leaveLobbyBtn = document.getElementById('btn-leave-lobby');
+    if (leaveLobbyBtn) {
+      leaveLobbyBtn.addEventListener('click', () => {
+        leaveLobby();
+      });
+    }
+
     const restartBtn = document.getElementById('btn-restart-player');
     if (restartBtn) {
       restartBtn.addEventListener('click', () => {
@@ -376,6 +408,7 @@
         socket.emit('player:restart_lobby');
       });
     }
+  }
 
   function updateLobbyPlayerList(players) {
     const listEl = document.getElementById('wait-players-list');
@@ -388,10 +421,17 @@
 
     activePlayers.forEach(p => {
       const chip = document.createElement('span');
-      chip.className = `inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-        p.id === state.playerId ? 'bg-primary text-white' : 'bg-white text-stone-800 border border-stone-200'
-      }`;
-      chip.innerHTML = `<span>${p.avatar}</span> <span>${p.name}</span>`;
+      if (p.id === state.playerId) {
+        chip.className = 'inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-semibold bg-primary text-white shadow-xs';
+        chip.innerHTML = `
+          <span>${p.avatar}</span>
+          <span>${p.name} (jij)</span>
+          <button type="button" class="ml-1 w-4 h-4 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-[10px] text-white cursor-pointer" title="Lobby verlaten" onclick="event.stopPropagation(); window.playerApp.leaveLobby();">✕</button>
+        `;
+      } else {
+        chip.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-white text-stone-800 border border-stone-200';
+        chip.innerHTML = `<span>${p.avatar}</span> <span>${p.name}</span>`;
+      }
       listEl.appendChild(chip);
     });
   }
@@ -666,17 +706,6 @@
 
       wrap.appendChild(card);
       container.appendChild(wrap);
-
-      if (activeCooldown > 0 && !cooldownIntervals[item.id]) {
-        startLocalCooldownTimer(item.id);
-      }
-    });
-
-    // Bereken het pad dat exact door alle objectives heen loopt
-    setTimeout(updateAdventureTrail, 30);
-    setTimeout(updateAdventureTrail, 200);
-    setTimeout(updateAdventureTrail, 500);
-  }
 
       if (activeCooldown > 0 && !cooldownIntervals[item.id]) {
         startLocalCooldownTimer(item.id);
@@ -4065,6 +4094,7 @@
     nextInstagramReel,
     scrollToNextTikTokReel,
     openFollowingListModal,
+    leaveLobby,
     exitTrap,
     getFeedVideo: (idx) => FEED_OPEN_VIDEOS[idx % FEED_OPEN_VIDEOS.length],
     toggleTikTokLike,
