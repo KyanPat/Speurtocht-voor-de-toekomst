@@ -61,7 +61,7 @@
     <!-- ============================================== -->
     <section id="screen-login" class="flex-1 flex flex-col justify-center items-center px-6 py-8 relative z-10">
       <!-- Groot Scherm / Inzoomen Knop Bovenin Login -->
-      <button id="btn-login-fullscreen" type="button" class="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold shadow-md transition active:scale-95 cursor-pointer" title="Groot scherm (Inzoomen)">
+      <button id="btn-login-fullscreen" type="button" onclick="if(window.playerApp && window.playerApp.toggleFullScreen) window.playerApp.toggleFullScreen()" class="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold shadow-md transition active:scale-95 cursor-pointer" title="Groot scherm (Inzoomen)">
         <span class="material-symbols-outlined text-[17px] fullscreen-icon-elem">zoom_in</span>
         <span id="login-fullscreen-text">Groot scherm</span>
       </button>
@@ -86,17 +86,17 @@
         <div class="w-full text-left mb-5">
           <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">Kies je Avatar</label>
           <div id="avatar-picker" class="flex justify-between items-center bg-stone-100 p-1.5 rounded-xl border border-stone-200">
-            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center bg-white shadow-sm ring-2 ring-primary transition" data-avatar="🎒">🎒</button>
-            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition" data-avatar="🦊">🦊</button>
-            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition" data-avatar="⚡">⚡</button>
-            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition" data-avatar="🚀">🚀</button>
-            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition" data-avatar="🎯">🎯</button>
-            <button type="button" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition" data-avatar="🧭">🧭</button>
+            <button type="button" onclick="if(window.playerApp && window.playerApp.selectAvatar) window.playerApp.selectAvatar('🎒')" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center bg-white shadow-sm ring-2 ring-primary transition cursor-pointer" data-avatar="🎒">🎒</button>
+            <button type="button" onclick="if(window.playerApp && window.playerApp.selectAvatar) window.playerApp.selectAvatar('🦊')" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition cursor-pointer" data-avatar="🦊">🦊</button>
+            <button type="button" onclick="if(window.playerApp && window.playerApp.selectAvatar) window.playerApp.selectAvatar('⚡')" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition cursor-pointer" data-avatar="⚡">⚡</button>
+            <button type="button" onclick="if(window.playerApp && window.playerApp.selectAvatar) window.playerApp.selectAvatar('🚀')" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition cursor-pointer" data-avatar="🚀">🚀</button>
+            <button type="button" onclick="if(window.playerApp && window.playerApp.selectAvatar) window.playerApp.selectAvatar('🎯')" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition cursor-pointer" data-avatar="🎯">🎯</button>
+            <button type="button" onclick="if(window.playerApp && window.playerApp.selectAvatar) window.playerApp.selectAvatar('🧭')" class="avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center hover:bg-white/80 transition cursor-pointer" data-avatar="🧭">🧭</button>
           </div>
         </div>
 
         <!-- Join Knop -->
-        <button id="btn-join-game" type="button" class="w-full py-3.5 px-6 rounded-xl bg-primary hover:bg-primary-dark active:scale-[0.98] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2">
+        <button id="btn-join-game" type="button" onclick="if(window.playerApp && window.playerApp.joinGame) window.playerApp.joinGame()" class="w-full py-3.5 px-6 rounded-xl bg-primary hover:bg-primary-dark active:scale-[0.98] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
           <span>Doe mee met de speurtocht</span>
           <span class="material-symbols-outlined text-base">arrow_forward</span>
         </button>
@@ -108,7 +108,7 @@
     <!-- ============================================== -->
     <section id="screen-lobby-wait" class="hidden flex-1 flex flex-col justify-center items-center px-6 py-8 relative z-10 text-center">
       <!-- Groot Scherm / Inzoomen Knop Bovenin Lobby -->
-      <button id="btn-lobby-fullscreen" type="button" class="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold shadow-md transition active:scale-95 cursor-pointer" title="Groot scherm (Inzoomen)">
+      <button id="btn-lobby-fullscreen" type="button" onclick="if(window.playerApp && window.playerApp.toggleFullScreen) window.playerApp.toggleFullScreen()" class="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold shadow-md transition active:scale-95 cursor-pointer" title="Groot scherm (Inzoomen)">
         <span class="material-symbols-outlined text-[17px] fullscreen-icon-elem">zoom_in</span>
         <span id="lobby-fullscreen-text">Groot scherm</span>
       </button>
@@ -286,28 +286,33 @@
 
   </div>
 
-  <!-- Socket.io Client Lib -->
+  <!-- Socket.io Client Lib (Lokaal + betrouwbare CDN fallback) -->
   <script src="/socket.io/socket.io.js"></script>
+  <script>
+    if (typeof io === 'undefined') {
+      document.write('<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"><\/script>');
+    }
+  </script>
 
-  <!-- Applicatie Scripts met Cache Buster -->
-  <script src="/js/itemsData.js?v=17"></script>
-  <script src="/js/soundEffects.js?v=17"></script>
-  <script src="/js/notifications.js?v=17"></script>
-  <script src="/js/playerApp.js?v=17"></script>
+  <!-- Applicatie Scripts met Cache Buster (v18) -->
+  <script src="/js/itemsData.js?v=18"></script>
+  <script src="/js/soundEffects.js?v=18"></script>
+  <script src="/js/notifications.js?v=18"></script>
+  <script src="/js/playerApp.js?v=18"></script>
 
   <!-- PWA Service Worker registratie met forceer-update -->
   <script>
     if ('caches' in window) {
       caches.keys().then(keys => {
         keys.forEach(k => {
-          if (k !== 'doomscroll-escape-v17') caches.delete(k);
+          if (k !== 'doomscroll-escape-v18') caches.delete(k);
         });
       });
     }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=17')
+        navigator.serviceWorker.register('/sw.js?v=18')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);

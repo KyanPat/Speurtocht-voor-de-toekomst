@@ -1,6 +1,22 @@
 // Player App State & Controller voor Doomscroll Escape (v5)
 (function () {
-  const socket = io();
+  let socket = null;
+  try {
+    if (typeof io !== 'undefined') {
+      socket = io();
+    }
+  } catch (e) {
+    console.warn('Socket.IO initialisatiefout:', e);
+  }
+
+  // Veilige fallback zodat UI en knoppen ALTIJD blijven werken
+  if (!socket) {
+    socket = {
+      on: () => {},
+      emit: () => {},
+      data: {}
+    };
+  }
 
   // Lokale toestand
   const state = {
@@ -329,61 +345,80 @@
   // ==========================================
   // AVATAR & NAAM SETUP (LOBBY)
   // ==========================================
+  function selectAvatar(av) {
+    state.playerAvatar = av;
+    localStorage.setItem('doomscroll_playerAvatar', av);
+    setupAvatarPicker();
+    if (window.sounds) window.sounds.playClick();
+  }
+
   function setupAvatarPicker() {
     const picker = document.getElementById('avatar-picker');
     if (!picker) return;
 
-    const avatars = ['🎒', '🧭', '📱', '🕵️', '🚀', '⚡', '🦊', '🦉'];
+    const avatars = ['🎒', '🦊', '⚡', '🚀', '🎯', '🧭'];
     picker.innerHTML = '';
 
     avatars.forEach(av => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `w-10 h-10 rounded-2xl flex items-center justify-center text-xl transition-all ${
-        state.playerAvatar === av ? 'bg-primary/20 border-2 border-primary scale-110' : 'bg-stone-100 hover:bg-stone-200'
+      const isSelected = state.playerAvatar === av;
+      btn.className = `avatar-opt w-10 h-10 rounded-lg text-xl flex items-center justify-center transition cursor-pointer ${
+        isSelected ? 'bg-white shadow-sm ring-2 ring-primary scale-105' : 'hover:bg-white/80'
       }`;
       btn.textContent = av;
-      btn.addEventListener('click', () => {
-        state.playerAvatar = av;
-        localStorage.setItem('doomscroll_playerAvatar', av);
-        setupAvatarPicker();
-        if (window.sounds) window.sounds.playClick();
-      });
+      btn.onclick = (e) => {
+        e.preventDefault();
+        selectAvatar(av);
+      };
       picker.appendChild(btn);
     });
+  }
+
+  function joinGame() {
+    const input = document.getElementById('player-name-input');
+    const name = (input ? input.value : state.playerName || '').trim();
+    if (!name) {
+      if (input) {
+        input.focus();
+        input.classList.add('shake', 'border-rose-500');
+        setTimeout(() => input.classList.remove('shake'), 400);
+      }
+      showToast('⚠️ Vul eerst je naam in om mee te doen!', 'warning');
+      return;
+    }
+
+    state.playerName = name;
+    localStorage.setItem('doomscroll_playerName', name);
+    if (window.sounds) window.sounds.playSuccess();
+
+    socket.emit('player:join', {
+      name: state.playerName,
+      avatar: state.playerAvatar,
+      existingId: state.playerId
+    });
+
+    const waitNameEl = document.getElementById('wait-player-name');
+    if (waitNameEl) waitNameEl.textContent = state.playerName;
+    showScreen('lobbyWait');
   }
 
   function setupLoginHandler() {
     const btn = document.getElementById('btn-join-game');
     const input = document.getElementById('player-name-input');
 
-    const handleJoin = () => {
-      const name = (input.value || '').trim();
-      if (!name) {
-        input.focus();
-        input.classList.add('shake', 'border-rose-500');
-        setTimeout(() => input.classList.remove('shake'), 400);
-        return;
-      }
+    if (btn) {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        joinGame();
+      };
+    }
 
-      state.playerName = name;
-      localStorage.setItem('doomscroll_playerName', name);
-      if (window.sounds) window.sounds.playSuccess();
-
-      socket.emit('player:join', {
-        name: state.playerName,
-        avatar: state.playerAvatar,
-        existingId: state.playerId
-      });
-
-      document.getElementById('wait-player-name').textContent = state.playerName;
-      showScreen('lobbyWait');
-    };
-
-    btn.addEventListener('click', handleJoin);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleJoin();
-    });
+    if (input) {
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') joinGame();
+      };
+    }
 
     const leaveLobbyBtn = document.getElementById('btn-leave-lobby');
     if (leaveLobbyBtn) {
@@ -4060,6 +4095,8 @@
   // ==========================================
   window.playerApp = {
     goBack,
+    selectAvatar,
+    joinGame,
     submitCode,
     openHintVideo,
     closeModal,

@@ -66,8 +66,8 @@ console.log('✓ Profiel "Volgend" opent lijst met gevolgde accounts:', hasProfi
 
 // 8. Controleer Cache Busters
 console.log('\n[Check 8] Cache Busters in index.html:');
-const isCacheV17 = indexHtml.includes('?v=17') && indexHtml.includes('doomscroll-escape-v17');
-console.log('✓ Alle scripts geüpgraded naar ?v=17 en service worker v17:', isCacheV17);
+const isCacheV18 = indexHtml.includes('?v=18') && indexHtml.includes('doomscroll-escape-v18');
+console.log('✓ Alle scripts geüpgraded naar ?v=18 en service worker v18:', isCacheV18);
 
 // 9. Controleer Like, Dislike, Video in Chat en Stippellijn
 console.log('\n[Check 9] Like/Dislike, Klikbare Video Reel en Stippellijn door alle objectives:');

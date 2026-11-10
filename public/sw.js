@@ -1,5 +1,5 @@
-// Service Worker voor Doomscroll Escape PWA (v17 - Campus Avans Locaties)
-const CACHE_NAME = 'doomscroll-escape-v17';
+// Service Worker voor Doomscroll Escape PWA (v18 - Fix Cache & Network First)
+const CACHE_NAME = 'doomscroll-escape-v18';
 
 // Essentiële core bestanden voor offline werking en data-besparing
 const CORE_ASSETS = [
@@ -8,10 +8,10 @@ const CORE_ASSETS = [
   '/digibord.html',
   '/manifest.json',
   '/css/app.css',
-  '/js/itemsData.js?v=17',
-  '/js/playerApp.js?v=17',
-  '/js/soundEffects.js?v=17',
-  '/js/notifications.js?v=17',
+  '/js/itemsData.js?v=18',
+  '/js/playerApp.js?v=18',
+  '/js/soundEffects.js?v=18',
+  '/js/notifications.js?v=18',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon.svg'
@@ -76,7 +76,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Scripts, Stijlen en Fonts: Stale-While-Revalidate voor snelle weergave en minimale data
+  // 3. Scripts, Stijlen en Fonts: Network-First zodat updates direct doorkomen
   const isStaticAsset = request.destination === 'style' ||
     request.destination === 'script' ||
     request.destination === 'font' ||
@@ -85,16 +85,15 @@ self.addEventListener('fetch', (event) => {
 
   if (isStaticAsset && request.method === 'GET') {
     event.respondWith(
-      caches.match(request).then((cached) => {
-        const fetchPromise = fetch(request).then((networkResponse) => {
+      fetch(request)
+        .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const clone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
           return networkResponse;
-        }).catch(() => cached);
-        return cached || fetchPromise;
-      })
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }
