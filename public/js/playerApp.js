@@ -1027,7 +1027,7 @@
         <div>
           <h3 class="font-display text-lg font-black text-stone-900">Schuif het puzzelstuk op zijn plek</h3>
           <p class="text-xs text-stone-600 mt-1 leading-snug">
-            Schuif het stukje <b>🧩</b> precies in het groene doelvlak om de directiekamer van <b>${item.name}</b> te ontgrendelen:
+            Schuif het stukje <b>🧩</b> precies in het groene doelvlak om de geheime locatie van <b>${item.name}</b> te ontgrendelen:
           </p>
         </div>
 
@@ -1107,7 +1107,7 @@
         <div>
           <h3 class="font-display text-lg font-black text-stone-900">Selecteer alle 3 de huwelijksitems</h3>
           <p class="text-xs text-stone-600 mt-1 leading-snug">
-            Tik op de <b>3 huwelijksiconen</b> (💍 Trouwring, 💐 Boeket, 🎂 Bruidstaart) om de Trouwzaal/Aula te ontgrendelen:
+            Tik op de <b>3 huwelijksiconen</b> (💍 Trouwring, 💐 Boeket, 🎂 Bruidstaart) om de geheime locatie van <b>${item.name}</b> te ontgrendelen:
           </p>
         </div>
 

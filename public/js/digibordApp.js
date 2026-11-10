@@ -312,9 +312,11 @@
       const localItem = typeof ITEMS_DATA !== 'undefined' ? ITEMS_DATA[id] : null;
       const serverItem = state.limitedItems[id] || state.generalItems[id] || {};
       const name = serverItem.name || localItem?.name || id;
-      const location = serverItem.location || localItem?.location || '';
-      const code = serverItem.code || localItem?.code || '';
       const isLimited = serverItem.isLimited !== undefined ? serverItem.isLimited : (localItem?.isLimited || false);
+      const location = (isLimited && (serverItem.secretLocation || localItem?.secretLocation))
+        ? (serverItem.secretLocation || localItem?.secretLocation)
+        : (serverItem.location || localItem?.location || '');
+      const code = serverItem.code || localItem?.code || '';
       const icon = localItem?.icon || 'explore';
 
       const card = document.createElement('div');
@@ -385,8 +387,10 @@
       const localItem = typeof ITEMS_DATA !== 'undefined' ? ITEMS_DATA[id] : null;
       const serverItem = state.limitedItems[id] || state.generalItems[id] || {};
       const name = serverItem.name || localItem?.name || id;
-      const location = serverItem.location || localItem?.location || 'Nader te bepalen';
       const isLimited = serverItem.isLimited !== undefined ? serverItem.isLimited : (localItem?.isLimited || false);
+      const location = (isLimited && (serverItem.secretLocation || localItem?.secretLocation))
+        ? (serverItem.secretLocation || localItem?.secretLocation)
+        : (serverItem.location || localItem?.location || 'Nader te bepalen');
 
       const chip = document.createElement('div');
       chip.className = `p-2 rounded-xl border flex flex-col justify-between ${

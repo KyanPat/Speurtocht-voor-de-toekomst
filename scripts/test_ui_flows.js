@@ -66,8 +66,8 @@ console.log('✓ Profiel "Volgend" opent lijst met gevolgde accounts:', hasProfi
 
 // 8. Controleer Cache Busters
 console.log('\n[Check 8] Cache Busters in index.html:');
-const isCacheV16 = indexHtml.includes('?v=16') && indexHtml.includes('doomscroll-escape-v16');
-console.log('✓ Alle scripts geüpgraded naar ?v=16 en service worker v16:', isCacheV16);
+const isCacheV17 = indexHtml.includes('?v=17') && indexHtml.includes('doomscroll-escape-v17');
+console.log('✓ Alle scripts geüpgraded naar ?v=17 en service worker v17:', isCacheV17);
 
 // 9. Controleer Like, Dislike, Oma Foto Reel en Stippellijn
 console.log('\n[Check 9] Like/Dislike, Klikbare Oma Foto en Stippellijn door alle objectives:');
@@ -136,5 +136,23 @@ const hasStrictVideos = !playerAppJs.includes("${hasVideo ?") &&
   playerAppJs.includes('toggleTikTokAudio') &&
   playerAppJs.includes('tiktok-video-el');
 console.log('✓ TikTok reels gebruiken strikt videos met audio toggle:', hasStrictVideos);
+
+// 16. Controleer Exacte Campus/Vindplek Locaties
+console.log('\n[Check 16] Exacte Fysieke Locaties:');
+const itemsDataJs = fs.readFileSync('public/js/itemsData.js', 'utf8');
+const expectedLocs = [
+  'LA227',
+  'LX200',
+  'LA Hoofdingang',
+  'LA Balie',
+  'LA500 Trap',
+  'LD Kantine',
+  'LD112',
+  'Lovensdijkstraat Plein'
+];
+const allLocsPresentInItemsData = expectedLocs.every(loc => itemsDataJs.includes(loc));
+const allLocsPresentInServer = expectedLocs.every(loc => serverJs.includes(loc));
+console.log('✓ Alle 8 campuslocaties aanwezig in itemsData.js:', allLocsPresentInItemsData);
+console.log('✓ Alle 8 campuslocaties aanwezig in server.js:', allLocsPresentInServer);
 
 console.log('\n--- ALLE CONTROLES MET SUCCES AFGEROND! ---');

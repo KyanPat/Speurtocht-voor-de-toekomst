@@ -126,7 +126,7 @@ const INITIAL_LIMITED_ITEMS = {
     id: 'job_interview',
     name: 'Job Interview',
     location: '❓ Verborgen (Los taak op)',
-    secretLocation: 'Kantoor 302',
+    secretLocation: 'LA500 Trap',
     points: 1,
     code: '2413',
     isLimited: true,
@@ -138,7 +138,7 @@ const INITIAL_LIMITED_ITEMS = {
     id: 'job_raise',
     name: 'Job Raise',
     location: '❓ Verborgen (Los taak op)',
-    secretLocation: 'Directiekamer 401',
+    secretLocation: 'LD Kantine',
     points: 1,
     code: '1243',
     isLimited: true,
@@ -154,7 +154,7 @@ const INITIAL_LIMITED_ITEMS = {
     id: 'date',
     name: 'Date',
     location: '❓ Verborgen (Los taak op)',
-    secretLocation: 'Kantine Terras',
+    secretLocation: 'LD112',
     points: 1,
     code: '3442',
     isLimited: true,
@@ -166,7 +166,7 @@ const INITIAL_LIMITED_ITEMS = {
     id: 'trouwen',
     name: 'Trouwen',
     location: '❓ Verborgen (Los taak op)',
-    secretLocation: 'Trouwzaal / Aula',
+    secretLocation: 'Lovensdijkstraat Plein',
     points: 1,
     code: '3443',
     isLimited: true,
@@ -184,7 +184,7 @@ const INITIAL_GENERAL_ITEMS = {
   autosleutels: {
     id: 'autosleutels',
     name: 'Autosleutels',
-    location: 'Parkeerdek Noord',
+    location: 'LA227',
     points: 1,
     code: '4222',
     isLimited: false
@@ -192,7 +192,7 @@ const INITIAL_GENERAL_ITEMS = {
   huissleutels: {
     id: 'huissleutels',
     name: 'Huissleutels',
-    location: 'Binnentuin Bankje #4',
+    location: 'LX200',
     points: 1,
     code: '1412',
     isLimited: false
@@ -200,7 +200,7 @@ const INITIAL_GENERAL_ITEMS = {
   diploma: {
     id: 'diploma',
     name: 'Diploma',
-    location: 'Collegezaal B2',
+    location: 'LA Hoofdingang',
     points: 1,
     code: '3221',
     isLimited: false
@@ -208,7 +208,7 @@ const INITIAL_GENERAL_ITEMS = {
   droomreis: {
     id: 'droomreis',
     name: 'Ticket voor droomreis',
-    location: 'Receptie LA225',
+    location: 'LA Balie',
     points: 1,
     code: '2143',
     isLimited: false
