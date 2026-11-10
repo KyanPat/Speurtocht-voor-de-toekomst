@@ -1,5 +1,5 @@
-// Service Worker voor Doomscroll Escape PWA (v18 - Fix Cache & Network First)
-const CACHE_NAME = 'doomscroll-escape-v18';
+// Service Worker voor Doomscroll Escape PWA (v19 - Fix All References & Network First)
+const CACHE_NAME = 'doomscroll-escape-v19';
 
 // Essentiële core bestanden voor offline werking en data-besparing
 const CORE_ASSETS = [
@@ -8,10 +8,10 @@ const CORE_ASSETS = [
   '/digibord.html',
   '/manifest.json',
   '/css/app.css',
-  '/js/itemsData.js?v=18',
-  '/js/playerApp.js?v=18',
-  '/js/soundEffects.js?v=18',
-  '/js/notifications.js?v=18',
+  '/js/itemsData.js?v=19',
+  '/js/playerApp.js?v=19',
+  '/js/soundEffects.js?v=19',
+  '/js/notifications.js?v=19',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon.svg'

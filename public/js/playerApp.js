@@ -3694,6 +3694,10 @@
     renderWhatsAppChat(document.getElementById('app-view-container'), chatId);
   }
 
+  function renderWhatsAppApp(container) {
+    renderWhatsAppChats(container);
+  }
+
   function renderWhatsAppChats(container) {
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-[#0b141a] text-white max-w-md mx-auto select-none">
@@ -4073,7 +4077,8 @@
       <span class="flex-1 mr-2">${message}</span>
       <button type="button" class="text-stone-400 hover:text-white p-1">✕</button>
     `;
-    toast.querySelector('button').addEventListener('click', () => toast.remove());
+    const toastCloseBtn = toast.querySelector('button');
+    if (toastCloseBtn) toastCloseBtn.addEventListener('click', () => toast.remove());
     document.body.appendChild(toast);
     setTimeout(() => {
       if (toast.parentElement) toast.remove();
