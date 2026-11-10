@@ -100,11 +100,6 @@
           <span>Doe mee met de speurtocht</span>
           <span class="material-symbols-outlined text-base">arrow_forward</span>
         </button>
-
-        <!-- Handige shortcut naar Digibord voor testen -->
-        <a href="/digibord" target="_blank" class="mt-4 text-[11px] text-stone-500 hover:text-stone-800 underline flex items-center justify-center gap-1">
-          <span class="material-symbols-outlined text-[14px]">tv</span> Open Digibord scherm
-        </a>
       </div>
     </section>
 
@@ -126,13 +121,10 @@
         </div>
 
         <h2 class="font-display text-xl font-bold text-stone-900">Welkom in de lobby, <span id="wait-player-name" class="text-primary">Speler</span>!</h2>
-        <p class="text-xs text-stone-600 mt-1 mb-3 font-medium">Het spel start over een dadelijk moment.</p>
-
-        <!-- Direct Spel Starten Knop -->
-        <button id="btn-lobby-start-direct" type="button" class="w-full py-2.5 px-4 mb-4 rounded-xl bg-primary hover:bg-emerald-700 text-white font-bold text-xs shadow-md active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer">
-          <span class="material-symbols-outlined text-base">play_arrow</span>
-          <span>Start Spel Direct</span>
-        </button>
+        <p class="text-xs text-stone-600 mt-1 mb-4 font-medium flex items-center justify-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+          <span>De spelleider start het spel zo dadelijk op het Digibord.</span>
+        </p>
 
         <!-- Spelers in Lobby -->
         <div class="w-full bg-stone-50 rounded-xl p-3 border border-stone-200 mb-4 text-left">
@@ -150,12 +142,9 @@
           <span><b>Speltip:</b> Pas op voor video-hints! Ze pauzeren je straftijd niet en kosten kostbare minuten.</span>
         </div>
 
-        <!-- Handige link naar Digibord / Vindplekken -->
-        <div class="mt-4 pt-3 border-t border-stone-200/80 w-full flex items-center justify-between text-[11px] text-stone-500">
-          <a href="/digibord" target="_blank" class="hover:text-stone-800 underline flex items-center gap-1">
-            <span class="material-symbols-outlined text-[14px]">tv</span> Digibord / QR
-          </a>
-          <button id="btn-mobile-view-locations" type="button" class="hover:text-stone-800 underline flex items-center gap-1 font-semibold">
+        <!-- Handige link naar Vindplekken (Geen digibord/qr link voor spelers) -->
+        <div class="mt-4 pt-3 border-t border-stone-200/80 w-full flex items-center justify-center text-[11px] text-stone-500">
+          <button id="btn-mobile-view-locations" type="button" class="hover:text-stone-800 underline flex items-center gap-1 font-semibold cursor-pointer">
             <span class="material-symbols-outlined text-[14px]">pin_drop</span> Bekijk Vindplekken
           </button>
         </div>
@@ -236,9 +225,8 @@
       
       <!-- Universele Telefoon Top Bar met Tijd en Escape Knop -->
       <div class="fixed top-0 left-0 right-0 z-50 pt-safe px-3 pb-2 flex items-center justify-between pointer-events-none">
-        <button id="trap-exit-btn" type="button" class="pointer-events-auto flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-white shadow-xl border border-white/20 active:scale-95 transition-all">
-          <span class="material-symbols-outlined text-sm leading-none text-rose-400">close</span>
-          <span class="font-sans text-[11px] font-bold text-white">✕ Terug naar Speurtocht</span>
+        <button id="trap-exit-btn" type="button" class="pointer-events-auto flex items-center justify-center w-8 h-8 rounded-full bg-black/80 backdrop-blur-md text-white shadow-xl border border-white/20 active:scale-95 transition-all cursor-pointer" title="Terug">
+          <span class="material-symbols-outlined text-xl">arrow_back</span>
         </button>
 
         <div class="flex items-center gap-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[10px] font-mono pointer-events-auto border border-white/10">

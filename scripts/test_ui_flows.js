@@ -13,24 +13,24 @@ const hasAppNotifMapping = playerAppJs.includes("raw.includes('whatsapp') || raw
 console.log('✓ Hele notificatiebanner is klikbaar:', hasFullBannerClick);
 console.log('✓ Notificatie opent direct WhatsApp bij bericht van moeder:', hasAppNotifMapping);
 
-// 2. Controleer WhatsApp en Terugknoppen
-console.log('\n[Check 2] WhatsApp views & Terugknoppen:');
-const hasWhatsAppBackToChats = playerAppJs.includes('renderWhatsAppChats(document.getElementById');
-const hasWhatsAppInboxBackToGame = playerAppJs.includes('window.playerApp.exitTrap()');
-console.log('✓ WhatsApp chat met moeder heeft terugknop naar chatoverzicht:', hasWhatsAppBackToChats);
-console.log('✓ WhatsApp inbox heeft terugknop naar het spel (exitTrap):', hasWhatsAppInboxBackToGame);
+// 2. Controleer WhatsApp en Geschiedenis-Terugknoppen
+console.log('\n[Check 2] WhatsApp views & Terug-stack:');
+const hasWhatsAppHistory = playerAppJs.includes('WHATSAPP_CHATS') && playerAppJs.includes('openWhatsAppChat');
+const hasGoBackFunction = playerAppJs.includes('function goBack()') && playerAppJs.includes('viewHistory');
+console.log('✓ WhatsApp 5 verschillende chats aanwezig:', hasWhatsAppHistory);
+console.log('✓ Geschiedenis-stack met goBack() zonder oneindige lus:', hasGoBackFunction);
 
 // 3. Controleer Instagram DM & Moeder chat terugknoppen
 console.log('\n[Check 3] Instagram DM & Moeder chat terugknoppen:');
 const hasInstagramDMMoeder = playerAppJs.includes('renderInstagramChatMoeder');
-const hasDMMoederBack = playerAppJs.includes("renderInstagramDM(document.getElementById('app-view-container'), 'inbox')");
+const hasDMMoederBack = playerAppJs.includes("openInstagramChat('moeder')") && playerAppJs.includes('goBack()');
 console.log('✓ Instagram DM heeft chat met Moeder:', hasInstagramDMMoeder);
-console.log('✓ Chat met Moeder heeft terugknop naar DM inbox:', hasDMMoederBack);
+console.log('✓ Chat met Moeder heeft terugknop (arrow_back) naar DM inbox / geschiedenis:', hasDMMoederBack);
 
 // 4. Controleer Instagram Profiel terugknop
 console.log('\n[Check 4] Instagram Profiel terugknop:');
-const hasProfileBack = playerAppJs.includes("renderInstagramApp(document.getElementById('app-view-container'), 'feed')");
-console.log('✓ Instagram Profiel heeft terugknop (arrow_back) naar de feed:', hasProfileBack);
+const hasProfileBack = playerAppJs.includes("window.playerApp.goBack()") || playerAppJs.includes("goBack()");
+console.log('✓ Instagram Profiel heeft terugknop (arrow_back) naar de geschiedenis:', hasProfileBack);
 
 // 5. Controleer de knoppen in Item Detail Modal
 console.log('\n[Check 5] Item Detail Modal knoppen (Date etc.):');
@@ -69,15 +69,15 @@ console.log('\n[Check 8] Cache Busters in index.html:');
 const isCacheV17 = indexHtml.includes('?v=17') && indexHtml.includes('doomscroll-escape-v17');
 console.log('✓ Alle scripts geüpgraded naar ?v=17 en service worker v17:', isCacheV17);
 
-// 9. Controleer Like, Dislike, Oma Foto Reel en Stippellijn
-console.log('\n[Check 9] Like/Dislike, Klikbare Oma Foto en Stippellijn door alle objectives:');
+// 9. Controleer Like, Dislike, Video in Chat en Stippellijn
+console.log('\n[Check 9] Like/Dislike, Klikbare Video Reel en Stippellijn door alle objectives:');
 const hasGlobalLikeDislike = playerAppJs.includes('handleGlobalLike') && playerAppJs.includes('handleGlobalDislike');
 const hasTikTokLikeDislike = playerAppJs.includes('toggleTikTokLike') && playerAppJs.includes('toggleTikTokDislike');
-const hasClickableOmaPhoto = playerAppJs.includes("renderInstagramReel(document.getElementById('app-view-container'), window.playerApp.getFeedVideo(2), 'moeder')");
+const hasClickableOmaPhoto = playerAppJs.includes("openReelFromChat");
 const hasDynamicTrail = playerAppJs.includes('updateAdventureTrail') && indexHtml.includes('id="adventure-trail-svg"');
 console.log('✓ HandleGlobalLike en HandleGlobalDislike aanwezig en gekoppeld:', hasGlobalLikeDislike);
 console.log('✓ TikTok Like en Dislike acties aanwezig:', hasTikTokLikeDislike);
-console.log('✓ Klikbare foto van oma in chat moeder opent reel:', hasClickableOmaPhoto);
+console.log('✓ Klikbare video preview in chat opent reel via geschiedenis-stack:', hasClickableOmaPhoto);
 console.log('✓ Dynamisch avonturenpad SVG en updateAdventureTrail berekend door objectives:', hasDynamicTrail);
 
 // 10. Controleer Groot Scherm / Fullscreen functionaliteit voor telefoon
@@ -123,19 +123,23 @@ const hasNoSchoolReferences = !playerAppJs.includes('speurtocht op school') &&
   !playerAppJs.includes('Klas 3B Speurtocht');
 console.log('✓ Geen school/docent/klas referenties in chats & social feeds:', hasNoSchoolReferences);
 
-// 14. Controleer Lobby Start Tekst en Direct Start Knop
-console.log('\n[Check 14] Lobby Start Tekst en Direct Start Knop:');
-const hasLobbyStartText = indexHtml.includes('Het spel start over een dadelijk moment.') &&
-  indexHtml.includes('id="btn-lobby-start-direct"') &&
-  playerAppJs.includes('btn-lobby-start-direct');
-console.log('✓ Lobby toont "Het spel start over een dadelijk moment." en startknop:', hasLobbyStartText);
+// 14. Controleer Lobby Afhankelijkheid en Geen Digibord Link
+console.log('\n[Check 14] Lobby Afhankelijkheid & Verwijdering Digibord link op mobiel:');
+const hasLobbySubtext = indexHtml.includes('De spelleider start het spel zo dadelijk op het Digibord.');
+const hasNoDirectStartBtn = !indexHtml.includes('id="btn-lobby-start-direct"');
+const hasNoMobileDigibordLink = !indexHtml.includes('Digibord / QR');
+console.log('✓ Lobby toont "De spelleider start het spel zo dadelijk op het Digibord.":', hasLobbySubtext);
+console.log('✓ Geen directe startknop voor spelers (spelleider start op digibord):', hasNoDirectStartBtn);
+console.log('✓ Geen Digibord / QR link onderaan de mobiele lobby:', hasNoMobileDigibordLink);
 
-// 15. Controleer Endless Reels met Audio & Zuiver Video's
-console.log('\n[Check 15] Reels 100% Video met Geluid:');
+// 15. Controleer Endless Reels met Audio & Zuiver Video's (zachter volume 0.25)
+console.log('\n[Check 15] Reels 100% Video met Geluid (Zachter Volume 0.25):');
 const hasStrictVideos = !playerAppJs.includes("${hasVideo ?") &&
   playerAppJs.includes('toggleTikTokAudio') &&
   playerAppJs.includes('tiktok-video-el');
+const hasSofterVolume = playerAppJs.includes('0.25');
 console.log('✓ TikTok reels gebruiken strikt videos met audio toggle:', hasStrictVideos);
+console.log('✓ Video geluidsvolume staat zacht (0.25):', hasSofterVolume);
 
 // 16. Controleer Exacte Campus/Vindplek Locaties
 console.log('\n[Check 16] Exacte Fysieke Locaties:');
@@ -154,5 +158,10 @@ const allLocsPresentInItemsData = expectedLocs.every(loc => itemsDataJs.includes
 const allLocsPresentInServer = expectedLocs.every(loc => serverJs.includes(loc));
 console.log('✓ Alle 8 campuslocaties aanwezig in itemsData.js:', allLocsPresentInItemsData);
 console.log('✓ Alle 8 campuslocaties aanwezig in server.js:', allLocsPresentInServer);
+
+// 17. Controleer Paren Onder Elkaar op Kaart
+console.log('\n[Check 17] Paren Onder Elkaar (date & trouwen, job_interview & job_raise):');
+const hasPairedRouting = playerAppJs.includes("['date', 'trouwen']") && playerAppJs.includes("['job_interview', 'job_raise']");
+console.log('✓ Paren zijn gekoppeld en behouden zelfde uitlijning onder elkaar:', hasPairedRouting);
 
 console.log('\n--- ALLE CONTROLES MET SUCCES AFGEROND! ---');

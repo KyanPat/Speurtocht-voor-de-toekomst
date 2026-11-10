@@ -377,16 +377,6 @@
       });
     }
 
-    const startDirectBtn = document.getElementById('btn-lobby-start-direct');
-    if (startDirectBtn) {
-      startDirectBtn.addEventListener('click', () => {
-        if (window.sounds) window.sounds.playClick();
-        socket.emit('admin:start_game');
-        showToast('🚀 Het spel wordt gestart...', 'success');
-      });
-    }
-  }
-
   function updateLobbyPlayerList(players) {
     const listEl = document.getElementById('wait-players-list');
     const countEl = document.getElementById('wait-player-count');
@@ -432,18 +422,21 @@
   // ==========================================
   // DETERMINISTISCHE RANDOM ROUTE PER SPELER
   // ==========================================
+  // Willekeurige route, maar:
+  // - 'date' en 'trouwen' moeten direct onder elkaar (dezelfde kolom/uitlijning).
+  // - 'job_interview' en 'job_raise' moeten direct onder elkaar (dezelfde kolom/uitlijning).
   function getPlayerCardOrder(playerId) {
     const general = ['autosleutels', 'huissleutels', 'diploma', 'droomreis'];
     if (!playerId) {
       return [
-        { id: 'date', align: 'left', rotate: '-rotate-1', width: 'w-[184px]' },
-        { id: 'trouwen', align: 'right', rotate: 'rotate-1', width: 'w-[184px]' },
         { id: 'autosleutels', align: 'left', rotate: '-rotate-1', width: 'w-[184px]' },
         { id: 'huissleutels', align: 'right', rotate: 'rotate-2', width: 'w-[196px]' },
-        { id: 'job_interview', align: 'left', rotate: '-rotate-2', width: 'w-[184px]' },
+        { id: 'date', align: 'left', rotate: '-rotate-1', width: 'w-[184px]' },
+        { id: 'trouwen', align: 'left', rotate: 'rotate-1', width: 'w-[184px]' },
+        { id: 'diploma', align: 'right', rotate: '-rotate-1', width: 'w-[184px]' },
+        { id: 'job_interview', align: 'right', rotate: '-rotate-2', width: 'w-[184px]' },
         { id: 'job_raise', align: 'right', rotate: 'rotate-1', width: 'w-[184px]' },
-        { id: 'diploma', align: 'left', rotate: '-rotate-1', width: 'w-[184px]' },
-        { id: 'droomreis', align: 'right', rotate: 'rotate-1', width: 'w-[184px]' }
+        { id: 'droomreis', align: 'left', rotate: 'rotate-1', width: 'w-[184px]' }
       ];
     }
 
@@ -465,31 +458,54 @@
       [shuffledGeneral[i], shuffledGeneral[j]] = [shuffledGeneral[j], shuffledGeneral[i]];
     }
 
-    const pairA = ['job_interview', 'job_raise'];
-    const pairB = ['date', 'trouwen'];
-    const pickFirst = pseudoRandom() > 0.5 ? [pairA, pairB] : [pairB, pairA];
-
-    const sequence = [
-      shuffledGeneral[0],
-      pickFirst[0][0],
-      shuffledGeneral[1],
-      pickFirst[1][0],
-      shuffledGeneral[2],
-      pickFirst[0][1],
-      shuffledGeneral[3],
-      pickFirst[1][1]
+    // 6 eenheden: 4 losse algemene items + 2 vaste paren
+    const units = [
+      { type: 'single', id: shuffledGeneral[0] },
+      { type: 'single', id: shuffledGeneral[1] },
+      { type: 'single', id: shuffledGeneral[2] },
+      { type: 'single', id: shuffledGeneral[3] },
+      { type: 'pair', items: ['date', 'trouwen'] },
+      { type: 'pair', items: ['job_interview', 'job_raise'] }
     ];
 
-    return sequence.map((id, index) => {
-      const isLeft = index % 2 === 0;
-      const rot = (index % 3 === 0 ? 1 : index % 3 === 1 ? -1 : 2) * (isLeft ? -1 : 1);
-      return {
-        id,
-        align: isLeft ? 'left' : 'right',
-        rotate: rot < 0 ? `-rotate-${Math.abs(rot)}` : `rotate-${rot}`,
-        width: id === 'huissleutels' ? 'w-[196px]' : 'w-[184px]'
-      };
+    // Willekeurig schudden van de 6 blokken
+    for (let i = units.length - 1; i > 0; i--) {
+      const j = Math.floor(pseudoRandom() * (i + 1));
+      [units[i], units[j]] = [units[j], units[i]];
+    }
+
+    // Flatten naar kaartvolgorde waarbij paren dezelfde 'align' delen (strikt onder elkaar)
+    const cardOrder = [];
+    let currentAlign = pseudoRandom() > 0.5 ? 'left' : 'right';
+    let rotIndex = 0;
+
+    units.forEach(unit => {
+      if (unit.type === 'single') {
+        const rot = (rotIndex % 3 === 0 ? 1 : rotIndex % 3 === 1 ? -1 : 2) * (currentAlign === 'left' ? -1 : 1);
+        rotIndex++;
+        cardOrder.push({
+          id: unit.id,
+          align: currentAlign,
+          rotate: rot < 0 ? `-rotate-${Math.abs(rot)}` : `rotate-${rot}`,
+          width: unit.id === 'huissleutels' ? 'w-[196px]' : 'w-[184px]'
+        });
+        currentAlign = currentAlign === 'left' ? 'right' : 'left';
+      } else {
+        // Beide items in het paar krijgen PRECIES dezelfde uitlijning (strikt onder elkaar)
+        unit.items.forEach((id, pIdx) => {
+          const rot = (pIdx === 0 ? -1 : 1) * (currentAlign === 'left' ? 1 : -1);
+          cardOrder.push({
+            id,
+            align: currentAlign,
+            rotate: rot < 0 ? `-rotate-${Math.abs(rot)}` : `rotate-${rot}`,
+            width: id === 'huissleutels' ? 'w-[196px]' : 'w-[184px]'
+          });
+        });
+        currentAlign = currentAlign === 'left' ? 'right' : 'left';
+      }
     });
+
+    return cardOrder;
   }
 
   // ==========================================
@@ -1886,7 +1902,7 @@
     { id: 'c1', user: 'lisa.kramer', avatar: 'https://i.pravatar.cc/150?img=1', text: 'Hahaha dit meen je niet 😂💀', time: '3u', likes: 24, liked: false },
     { id: 'c2', user: 'daan_vd', avatar: 'https://i.pravatar.cc/150?img=12', text: 'Waar is dit opgenomen?? Moeten we echt eens heen met z’n allen!', time: '5u', likes: 14, liked: false },
     { id: 'c3', user: 'sophie.99', avatar: 'https://i.pravatar.cc/150?img=5', text: 'Wauw, echt geweldige kwaliteit beelden 😍✨', time: '1d', likes: 38, liked: false },
-    { id: 'c4', user: 'bram.student', avatar: 'https://i.pravatar.cc/150?img=8', text: 'Iemand al bij de aula geweest voor de code? 👀', time: '42m', likes: 9, liked: false },
+    { id: 'c4', user: 'bram.student', avatar: 'https://i.pravatar.cc/150?img=8', text: 'Wie gaat er mee lunchen zo meteen? 👀🍕', time: '42m', likes: 9, liked: false },
     { id: 'c5', user: 'lars.visser', avatar: 'https://i.pravatar.cc/150?img=15', text: 'Volgende week gaan we hier ook heen gasten 🔥', time: '2u', likes: 17, liked: false }
   ];
 
@@ -1902,10 +1918,102 @@
     return `https://i.pravatar.cc/150?img=${avatarNum}`;
   }
 
+  // ==========================================
+  // DOOMSCROLL TRAP GESCHIEDENIS STACK (BACK-NAVIGATIE ZONDER LOOPS)
+  // ==========================================
+  let viewHistory = [];
+  let currentTrapView = null;
+  let isPoppingTrapHistory = false;
+
+  function pushTrapView(viewType, params = {}) {
+    if (isPoppingTrapHistory) return;
+    if (currentTrapView) {
+      const last = viewHistory[viewHistory.length - 1];
+      const isDuplicate = last && last.viewType === currentTrapView.viewType && JSON.stringify(last.params || {}) === JSON.stringify(currentTrapView.params || {});
+      if (!isDuplicate) {
+        viewHistory.push({ ...currentTrapView });
+      }
+    }
+    currentTrapView = { viewType, params: params || {} };
+  }
+
+  function goBack() {
+    if (window.sounds) window.sounds.playClick();
+    if (viewHistory.length > 0) {
+      const prev = viewHistory.pop();
+      isPoppingTrapHistory = true;
+      currentTrapView = prev;
+      renderScreenByType(prev.viewType, prev.params);
+      isPoppingTrapHistory = false;
+    } else {
+      currentTrapView = null;
+      viewHistory = [];
+      exitTrap();
+    }
+  }
+
+  function renderScreenByType(viewType, params = {}) {
+    const container = document.getElementById('app-view-container');
+    if (!container) return;
+
+    switch (viewType) {
+      case 'instagram_feed':
+        renderInstagramApp(container, 'feed');
+        break;
+      case 'instagram_explore':
+        renderInstagramExplore(container);
+        break;
+      case 'instagram_activity':
+        renderInstagramActivity(container);
+        break;
+      case 'instagram_profile':
+        renderInstagramProfile(container);
+        break;
+      case 'instagram_dm':
+        renderInstagramDM(container, 'inbox');
+        break;
+      case 'instagram_chat':
+        if (params.chatId === 'moeder') {
+          renderInstagramChatMoeder(container);
+        } else {
+          renderInstagramChatSarah(container);
+        }
+        break;
+      case 'instagram_reel':
+        renderInstagramReel(container, params.reelData, params.returnView || 'dm');
+        break;
+      case 'instagram_story':
+        renderInstagramStory(container, params.storyUser, params.storyAvatar);
+        break;
+      case 'tiktok':
+        renderTikTokApp(container, params.activeTab || 'foryou');
+        break;
+      case 'bereal':
+        renderBeRealApp(container);
+        break;
+      case 'snapchat':
+        renderSnapchatApp(container);
+        break;
+      case 'whatsapp_chats':
+        renderWhatsAppChats(container);
+        break;
+      case 'whatsapp_chat':
+        renderWhatsAppChat(container, params.chatId || 'moeder');
+        break;
+      default:
+        renderInstagramApp(container, 'feed');
+        break;
+    }
+  }
+
   function openAppFeed(appName = 'Instagram', originItemId = null) {
     state.inDoomscroll = true;
     state.currentApp = appName;
     state.trapStartTime = state.trapStartTime || Date.now();
+
+    // Reset geschiedenis stack bij nieuwe binnenkomst vanuit de kaart
+    viewHistory = [];
+    currentTrapView = null;
 
     socket.emit('player:enter_doomscroll', { itemId: originItemId, app: appName });
     if (window.sounds) window.sounds.playError();
@@ -1923,15 +2031,20 @@
 
     const norm = (appName || 'Instagram').toLowerCase();
     if (norm.includes('whatsapp') || norm.includes('moeder')) {
-      renderWhatsAppApp(appContainer);
+      pushTrapView('whatsapp_chats');
+      renderWhatsAppChats(appContainer);
     } else if (norm.includes('tiktok')) {
-      renderTikTokApp(appContainer);
+      pushTrapView('tiktok', { activeTab: 'foryou' });
+      renderTikTokApp(appContainer, 'foryou');
     } else if (norm.includes('bereal')) {
+      pushTrapView('bereal');
       renderBeRealApp(appContainer);
     } else if (norm.includes('snapchat')) {
+      pushTrapView('snapchat');
       renderSnapchatApp(appContainer);
     } else {
-      renderInstagramApp(appContainer);
+      pushTrapView('instagram_feed');
+      renderInstagramApp(appContainer, 'feed');
     }
   }
 
@@ -2087,17 +2200,16 @@
         <!-- Instagram Header -->
         <div class="pt-12 px-3 pb-2.5 flex items-center justify-between border-b border-stone-800 bg-black/95 sticky top-0 z-20">
           <div class="flex items-center gap-2">
-            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold flex items-center gap-1 shadow active:scale-95 transition cursor-pointer" title="Terug naar speurtocht">
-              <span class="material-symbols-outlined text-sm">arrow_back</span>
-              <span>✕ Speurtocht</span>
+            <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-stone-900/80 hover:bg-stone-800 text-white flex items-center justify-center cursor-pointer transition active:scale-95 border border-white/20 shrink-0" title="Terug">
+              <span class="material-symbols-outlined text-xl">arrow_back</span>
             </button>
             <span class="font-instagram text-2xl tracking-wide text-white">Instagram</span>
           </div>
           <div class="flex items-center gap-3">
-            <button type="button" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'activity')" class="text-white hover:text-rose-500 transition" title="Meldingen">
+            <button type="button" onclick="window.playerApp.openInstagramTab('activity')" class="text-white hover:text-rose-500 transition" title="Meldingen">
               <span class="material-symbols-outlined text-[22px]">favorite</span>
             </button>
-            <div class="relative cursor-pointer" onclick="window.playerApp.renderInstagramDM(document.getElementById('app-view-container'))" title="Direct Berichten">
+            <div class="relative cursor-pointer" onclick="window.playerApp.openInstagramDM()" title="Direct Berichten">
               <span class="material-symbols-outlined text-[22px]">send</span>
               <span class="absolute -top-1 -right-1 bg-rose-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">1</span>
             </div>
@@ -2107,7 +2219,7 @@
         <!-- Stories Tray (Blijft binnen Instagram!) -->
         <div class="px-3 py-3 border-b border-stone-900 flex gap-3.5 overflow-x-auto overflow-y-hidden shrink-0 no-scrollbar">
           ${stories.map((s, i) => `
-            <div class="flex flex-col items-center gap-1 shrink-0 cursor-pointer" onclick="window.playerApp.renderInstagramStory(document.getElementById('app-view-container'), '${s.name}', '${s.img}')">
+            <div class="flex flex-col items-center gap-1 shrink-0 cursor-pointer" onclick="window.playerApp.openInstagramStory('${s.name}', '${s.img}')">
               <div class="w-16 h-16 rounded-full p-0.5 ${s.isMe ? 'bg-stone-700' : 'story-ring-gradient'} flex items-center justify-center">
                 <div class="w-full h-full rounded-full bg-black p-0.5 overflow-hidden">
                   <img src="${s.img}" class="w-full h-full object-cover rounded-full" alt="${s.name}">
@@ -2125,11 +2237,11 @@
 
         <!-- Instagram Bottom Navigatiebalk (Geen externe apps!) -->
         <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto h-12 bg-black/95 backdrop-blur-md border-t border-stone-800 flex items-center justify-around z-20 px-2">
-          <button type="button" class="text-white" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'feed')" title="Feed"><span class="material-symbols-outlined text-2xl">home</span></button>
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramExplore(document.getElementById('app-view-container'))" title="Zoeken"><span class="material-symbols-outlined text-2xl">search</span></button>
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramReel(document.getElementById('app-view-container'), window.playerApp.getFeedVideo(0), 'feed')" title="Reels"><span class="material-symbols-outlined text-2xl">movie</span></button>
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramActivity(document.getElementById('app-view-container'))" title="Activiteit"><span class="material-symbols-outlined text-2xl">favorite_border</span></button>
-          <button type="button" class="w-6 h-6 rounded-full overflow-hidden border border-stone-400 hover:border-white cursor-pointer" onclick="window.playerApp.renderInstagramProfile(document.getElementById('app-view-container'))" title="Profiel">
+          <button type="button" class="text-white" onclick="window.playerApp.openInstagramTab('feed')" title="Feed"><span class="material-symbols-outlined text-2xl">home</span></button>
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openInstagramTab('explore')" title="Zoeken"><span class="material-symbols-outlined text-2xl">search</span></button>
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openReelFromFeed(0)" title="Reels"><span class="material-symbols-outlined text-2xl">movie</span></button>
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openInstagramTab('activity')" title="Activiteit"><span class="material-symbols-outlined text-2xl">favorite_border</span></button>
+          <button type="button" class="w-6 h-6 rounded-full overflow-hidden border border-stone-400 hover:border-white cursor-pointer" onclick="window.playerApp.openInstagramTab('profile')" title="Profiel">
             <img src="${getRandomAvatarUrl()}" class="w-full h-full object-cover" alt="Profile">
           </button>
         </div>
@@ -2330,6 +2442,43 @@
     }
   }
 
+  function openInstagramTab(tab) {
+    pushTrapView('instagram_' + tab);
+    renderInstagramApp(document.getElementById('app-view-container'), tab);
+  }
+
+  function openInstagramDM() {
+    pushTrapView('instagram_dm');
+    renderInstagramDM(document.getElementById('app-view-container'), 'inbox');
+  }
+
+  function openInstagramStory(storyUser, storyAvatar) {
+    pushTrapView('instagram_story', { storyUser, storyAvatar });
+    renderInstagramStory(document.getElementById('app-view-container'), storyUser, storyAvatar);
+  }
+
+  function openReelFromFeed(videoIndex = 0) {
+    const vid = FEED_OPEN_VIDEOS[videoIndex % FEED_OPEN_VIDEOS.length];
+    pushTrapView('instagram_reel', { reelData: vid, returnView: 'feed' });
+    renderInstagramReel(document.getElementById('app-view-container'), vid, 'feed');
+  }
+
+  function openReelFromChat(videoIndex = 2, returnView = 'moeder', chatId = 'moeder') {
+    const vid = FEED_OPEN_VIDEOS[videoIndex % FEED_OPEN_VIDEOS.length];
+    pushTrapView('instagram_reel', { reelData: vid, returnView, chatId });
+    renderInstagramReel(document.getElementById('app-view-container'), vid, returnView);
+  }
+
+  function openInstagramChat(chatId) {
+    pushTrapView('instagram_chat', { chatId });
+    const container = document.getElementById('app-view-container');
+    if (chatId === 'moeder') {
+      renderInstagramChatMoeder(container);
+    } else {
+      renderInstagramChatSarah(container);
+    }
+  }
+
   // DIRECT MESSAGES (OVERZICHT MET MOEDER, SARAH EN LARS)
   function renderInstagramDM(container, activeChat = 'inbox') {
     closeInstagramComments();
@@ -2347,11 +2496,11 @@
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto select-none">
         
-        <!-- DM Inbox Header met Terugknop naar Feed -->
+        <!-- DM Inbox Header met Terugknop -->
         <div class="pt-12 px-4 pb-3 bg-stone-950 flex items-center justify-between border-b border-stone-800">
           <div class="flex items-center gap-3">
-            <button type="button" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'feed')" class="text-white hover:text-stone-300 p-1 flex items-center gap-1 font-bold text-sm cursor-pointer" title="Terug naar feed">
-              <span class="material-symbols-outlined text-2xl">arrow_back</span>
+            <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-stone-900/80 hover:bg-stone-800 text-white flex items-center justify-center cursor-pointer transition active:scale-95 border border-white/20 shrink-0" title="Terug">
+              <span class="material-symbols-outlined text-xl">arrow_back</span>
             </button>
             <span class="font-bold text-sm">@${(state.playerName || 'speler').toLowerCase().replace(/\s+/g, '_')}</span>
             <span class="material-symbols-outlined text-xs text-stone-400">expand_more</span>
@@ -2374,7 +2523,7 @@
         <div class="flex-1 overflow-y-auto divide-y divide-stone-900/60 text-left">
           
           <!-- BERICHT VAN MOEDER (Bovenaan & Ongelezen) -->
-          <div class="p-3.5 flex items-center gap-3 hover:bg-stone-900/70 cursor-pointer transition active:scale-[0.99] group bg-stone-950" onclick="window.playerApp.renderInstagramChatMoeder(document.getElementById('app-view-container'))">
+          <div class="p-3.5 flex items-center gap-3 hover:bg-stone-900/70 cursor-pointer transition active:scale-[0.99] group bg-stone-950" onclick="window.playerApp.openInstagramChat('moeder')">
             <div class="relative w-13 h-13 rounded-full bg-gradient-to-tr from-amber-400 to-rose-500 p-0.5 shrink-0">
               <div class="w-full h-full rounded-full bg-emerald-800 flex items-center justify-center text-2xl shadow">👩</div>
               <span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-black"></span>
@@ -2385,14 +2534,14 @@
                 <span class="text-[10px] text-blue-400 font-semibold">Zojuist</span>
               </div>
               <div class="flex items-center justify-between mt-0.5">
-                <p class="text-xs text-white font-medium truncate pr-2">Vergeet je fietssleutels straks niet mee te nemen! ❤️</p>
+                <p class="text-xs text-white font-medium truncate pr-2">Heb je deze leuke video al gezien? 😂</p>
                 <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
               </div>
             </div>
           </div>
 
           <!-- BERICHT VAN SARAH VAN DIJK (Met Reel) -->
-          <div class="p-3.5 flex items-center gap-3 hover:bg-stone-900/70 cursor-pointer transition active:scale-[0.99] group" onclick="window.playerApp.renderInstagramChatSarah(document.getElementById('app-view-container'))">
+          <div class="p-3.5 flex items-center gap-3 hover:bg-stone-900/70 cursor-pointer transition active:scale-[0.99] group" onclick="window.playerApp.openInstagramChat('sarah')">
             <div class="relative w-13 h-13 rounded-full bg-stone-700 p-0.5 shrink-0">
               <img src="https://i.pravatar.cc/150?img=49" class="w-full h-full rounded-full object-cover" alt="Sarah">
               <span class="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-black"></span>
@@ -2407,7 +2556,7 @@
           </div>
 
           <!-- BERICHT VAN LARS VISSER -->
-          <div class="p-3.5 flex items-center gap-3 hover:bg-stone-900/70 cursor-pointer transition active:scale-[0.99] group opacity-85" onclick="window.playerApp.renderInstagramChatMoeder(document.getElementById('app-view-container'))">
+          <div class="p-3.5 flex items-center gap-3 hover:bg-stone-900/70 cursor-pointer transition active:scale-[0.99] group opacity-85" onclick="window.playerApp.openInstagramChat('sarah')">
             <div class="w-13 h-13 rounded-full bg-stone-800 p-0.5 shrink-0">
               <img src="https://i.pravatar.cc/150?img=15" class="w-full h-full rounded-full object-cover" alt="Lars">
             </div>
@@ -2416,7 +2565,7 @@
                 <span class="text-xs font-bold text-white group-hover:text-rose-400 transition truncate">Lars Visser</span>
                 <span class="text-[10px] text-stone-400">10 min</span>
               </div>
-              <p class="text-xs text-stone-400 truncate mt-0.5">Ben jij nu ook in de kantine?? Ik zag je net lopen!</p>
+              <p class="text-xs text-stone-400 truncate mt-0.5">Ga je vanavond mee wat drinken in de stad? 🍕</p>
             </div>
           </div>
 
@@ -2426,19 +2575,18 @@
     `;
   }
 
-  // CHAT MET MOEDER (MET DUIDELIJKE TERUGKNOP NAAR INBOX & SPEURTOCHT)
+  // CHAT MET MOEDER (ALLEEN LEUKE VIDEO & GEEN SCHOOL/SPEURTOCHT REFERENTIES)
   function renderInstagramChatMoeder(container) {
     closeInstagramComments();
-    const sharedPhoto = getRandomPicsumUrl(500, 400);
 
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto select-none">
         
-        <!-- Chat Header met Terugknop naar Inbox & Snelle terugkeer naar Speurtocht -->
+        <!-- Chat Header met Terugknop naar Inbox -->
         <div class="sticky top-0 z-30 pt-12 px-4 pb-3 bg-stone-950 flex items-center justify-between border-b border-stone-800">
           <div class="flex items-center gap-3">
-            <button type="button" onclick="window.playerApp.renderInstagramDM(document.getElementById('app-view-container'), 'inbox')" class="text-white hover:text-stone-300 p-1 flex items-center gap-1 font-bold text-sm cursor-pointer" title="Terug naar berichten">
-              <span class="material-symbols-outlined text-2xl">arrow_back</span>
+            <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-stone-900/80 hover:bg-stone-800 text-white flex items-center justify-center cursor-pointer transition active:scale-95 border border-white/20 shrink-0" title="Terug naar berichten">
+              <span class="material-symbols-outlined text-xl">arrow_back</span>
             </button>
             <div class="w-9 h-9 rounded-full bg-emerald-700 flex items-center justify-center text-lg shadow">👩</div>
             <div class="flex flex-col text-left">
@@ -2446,45 +2594,44 @@
               <span class="text-[10px] text-emerald-400 font-semibold">● Nu actief</span>
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold shadow active:scale-95 transition flex items-center gap-1 cursor-pointer">
-              <span>✕ Speurtocht</span>
-            </button>
+          <div class="flex items-center gap-2 text-stone-400">
+            <span class="material-symbols-outlined text-[20px]">videocam</span>
+            <span class="material-symbols-outlined text-[20px]">call</span>
           </div>
         </div>
 
         <!-- Chat Berichten -->
         <div class="flex-1 p-4 space-y-3 overflow-y-auto text-left">
           <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-stone-900 text-xs text-stone-200 border border-stone-800 shadow">
-            Vergeet je fietssleutels straks niet mee te nemen! En hoe gaat de speurtocht? ❤️
+            Heb je deze leuke video al gezien? 😂
             <span class="text-[9px] text-stone-500 block text-right mt-1">12:30</span>
           </div>
 
-          <!-- KLIKBARE REEL / FOTO VAN OMA MET TERUGKEER NAAR DEZE CHAT -->
-          <div class="max-w-[85%] rounded-2xl rounded-tl-none bg-stone-900 border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-emerald-400 transition transform active:scale-95 group" onclick="window.playerApp.renderInstagramReel(document.getElementById('app-view-container'), window.playerApp.getFeedVideo(2), 'moeder')">
+          <!-- KLIKBARE REEL VAN OMA MET TERUGKEER NAAR DEZE CHAT -->
+          <div class="max-w-[85%] rounded-2xl rounded-tl-none bg-stone-900 border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-emerald-400 transition transform active:scale-95 group" onclick="window.playerApp.openReelFromChat(2, 'moeder', 'moeder')">
             <div class="relative w-full h-44 bg-black overflow-hidden">
-              <img src="${sharedPhoto}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="Foto van Oma">
+              <video src="${FEED_OPEN_VIDEOS[2].url}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" autoplay loop muted playsinline></video>
               <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
                 <div class="w-12 h-12 rounded-full bg-black/75 border border-white/50 flex items-center justify-center text-white shadow-xl group-hover:scale-110 transition">
                   <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
                 </div>
               </div>
               <span class="absolute top-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded text-[9px] font-bold text-white flex items-center gap-1">
-                🎬 Reel van Oma • 0:15
+                🎬 Grappige video van oma • 0:15
               </span>
               <span class="absolute bottom-2 right-2 bg-emerald-600/90 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow">
-                <span>Tik om Reel te kijken</span>
+                <span>Tik om video te bekijken</span>
                 <span class="material-symbols-outlined text-[11px]">arrow_forward</span>
               </span>
             </div>
             <div class="p-2.5 text-xs text-stone-200">
-              <p class="font-medium">Kijk deze foto die oma net stuurde! 😂</p>
+              <p class="font-medium">Kijk deze video die oma net stuurde! 😂</p>
               <span class="text-[9px] text-stone-500 block text-right mt-1">12:32</span>
             </div>
           </div>
 
           <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-stone-900 text-xs text-stone-200 border border-stone-800 shadow">
-            Doe je best lieverd! Geen TikTok kijken tijdens de speurtocht hè 😉
+            Moest meteen aan jou denken haha! ❤️
             <span class="text-[9px] text-stone-500 block text-right mt-1">12:33</span>
           </div>
         </div>
@@ -2501,18 +2648,18 @@
     `;
   }
 
-  // CHAT MET SARAH (MET DE REEL EN TERUGKNOP NAAR INBOX & SPEURTOCHT)
+  // CHAT MET SARAH (MET DE REEL EN TERUGKNOP NAAR INBOX)
   function renderInstagramChatSarah(container) {
     closeInstagramComments();
 
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto select-none">
         
-        <!-- DM Header met Terugknop naar Inbox & Speurtocht -->
+        <!-- DM Header met Terugknop naar Inbox -->
         <div class="sticky top-0 z-30 pt-12 px-4 pb-3 bg-stone-950 flex items-center justify-between border-b border-stone-800">
           <div class="flex items-center gap-3">
-            <button type="button" onclick="window.playerApp.renderInstagramDM(document.getElementById('app-view-container'), 'inbox')" class="text-white hover:text-stone-300 p-1 flex items-center gap-1 font-bold text-sm cursor-pointer" title="Terug naar berichten">
-              <span class="material-symbols-outlined text-2xl">arrow_back</span>
+            <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-stone-900/80 hover:bg-stone-800 text-white flex items-center justify-center cursor-pointer transition active:scale-95 border border-white/20 shrink-0" title="Terug naar berichten">
+              <span class="material-symbols-outlined text-xl">arrow_back</span>
             </button>
             <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-400 to-rose-500 p-0.5 flex items-center justify-center">
               <img src="https://i.pravatar.cc/150?img=49" class="w-full h-full rounded-full object-cover" alt="Sarah">
@@ -2522,27 +2669,21 @@
               <span class="text-[10px] text-emerald-400 font-semibold">● Nu actief</span>
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold shadow active:scale-95 transition flex items-center gap-1 cursor-pointer">
-              <span>✕ Speurtocht</span>
-            </button>
+          <div class="flex items-center gap-2 text-stone-400">
+            <span class="material-symbols-outlined text-[20px]">videocam</span>
+            <span class="material-symbols-outlined text-[20px]">call</span>
           </div>
         </div>
 
         <!-- Chat Berichten -->
         <div class="flex-1 p-4 space-y-3 overflow-y-auto text-left">
           <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-stone-900 text-xs text-stone-200 border border-stone-800">
-            Hey! Ben je nu met die speurtocht bezig? 😂
+            Hey! Kijk deze video die ik net zag 😂👇
             <span class="text-[9px] text-stone-500 block text-right mt-1">12:31</span>
           </div>
 
-          <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-stone-900 text-xs text-stone-200 border border-stone-800">
-            Kijk deze reel die ik net zag! Je gaat echt stuk 😂👇
-            <span class="text-[9px] text-stone-500 block text-right mt-1">12:32</span>
-          </div>
-
           <!-- GEDEELDE REEL KAART (KLIKBAAR MET TERUGMOGELIJKHEID NAAR DEZE CHAT!) -->
-          <div class="max-w-[85%] rounded-2xl bg-stone-900/90 border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-white transition transform active:scale-95 group" onclick="window.playerApp.renderInstagramReel(document.getElementById('app-view-container'), window.playerApp.getFeedVideo(3), 'dm')">
+          <div class="max-w-[85%] rounded-2xl bg-stone-900/90 border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-white transition transform active:scale-95 group" onclick="window.playerApp.openReelFromChat(3, 'sarah', 'sarah')">
             <div class="relative w-full aspect-video bg-black overflow-hidden">
               <img src="https://images.unsplash.com/photo-1535268647677-300dbf3d78d1?auto=format&fit=crop&w=600&q=80" class="w-full h-full object-cover group-hover:scale-105 transition" alt="Reel poster">
               <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -2565,7 +2706,7 @@
           </div>
 
           <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-stone-900 text-xs text-stone-200 border border-stone-800">
-            Kijk hem af voor je verder zoekt naar de codes haha!
+            Echt geweldig haha! Laat weten wat je vindt!
             <span class="text-[9px] text-stone-500 block text-right mt-1">12:33</span>
           </div>
         </div>
@@ -2582,7 +2723,7 @@
     `;
   }
 
-  // REELS WEERGAVE MET TERUGKNOP NAAR DM OF FEED & VOLLEDIGE VIDEO MET GELUID
+  // REELS WEERGAVE MET TERUGKNOP & VOLLEDIGE VIDEO MET ZACHTER GELUID (0.25)
   function renderInstagramReel(container, reelData, returnView = 'dm') {
     closeInstagramComments();
     const reel = reelData || FEED_OPEN_VIDEOS[3];
@@ -2600,15 +2741,10 @@
           <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90 pointer-events-none"></div>
         </div>
 
-        <!-- Header Bovenin met Duidelijke TERUGKNOPPEN & VOLGENDE KNOP! -->
+        <!-- Header Bovenin met Duidelijke TERUGKNOP & VOLGENDE KNOP! -->
         <div class="relative z-20 pt-12 px-3 pb-2 flex items-center justify-between gap-2">
-          <button type="button" id="reel-back-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-bold border border-white/20 hover:bg-black/80 active:scale-95 transition">
-            <span class="material-symbols-outlined text-sm">arrow_back</span>
-            <span>Terug naar ${returnView === 'whatsapp' ? 'WhatsApp' : returnView === 'feed' ? 'Feed' : 'Chat'}</span>
-          </button>
-
-          <button type="button" onclick="window.playerApp.exitTrap()" class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-rose-600/90 backdrop-blur-md text-white text-xs font-bold border border-white/20 hover:bg-rose-700 active:scale-95 transition" title="Terug naar de speurtocht">
-            <span>✕ Speurtocht</span>
+          <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center border border-white/20 hover:bg-black/80 active:scale-95 transition cursor-pointer" title="Terug">
+            <span class="material-symbols-outlined text-xl">arrow_back</span>
           </button>
           
           <button type="button" id="reel-next-btn" onclick="window.playerApp.nextInstagramReel(document.getElementById('app-view-container'), '${returnView}')" class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-bold border border-white/20 hover:bg-black/80 active:scale-95 transition cursor-pointer" title="Volgende reel bekijken">
@@ -2616,7 +2752,7 @@
             <span class="material-symbols-outlined text-sm">skip_next</span>
           </button>
 
-          <button type="button" id="reel-mute-btn" class="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/20" title="Geluid aan/uitzetten">
+          <button type="button" id="reel-mute-btn" class="w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white border border-white/20 cursor-pointer active:scale-95 transition" title="Geluid aan/uitzetten">
             <span class="material-symbols-outlined text-[18px]" id="reel-mute-icon">volume_up</span>
           </button>
         </div>
@@ -2686,24 +2822,6 @@
       </div>
     `;
 
-    // Event Listeners voor Reel
-    const backBtn = document.getElementById('reel-back-btn');
-    if (backBtn) {
-      backBtn.onclick = () => {
-        if (returnView === 'moeder') {
-          renderInstagramChatMoeder(container);
-        } else if (returnView === 'whatsapp') {
-          renderWhatsAppApp(container);
-        } else if (returnView === 'explore') {
-          renderInstagramExplore(container);
-        } else if (returnView === 'dm') {
-          renderInstagramChatSarah(container);
-        } else {
-          renderInstagramApp(container, 'feed');
-        }
-      };
-    }
-
     const vid = document.getElementById('active-reel-video');
     const muteBtn = document.getElementById('reel-mute-btn');
     const muteIcon = document.getElementById('reel-mute-icon');
@@ -2711,7 +2829,7 @@
 
     if (vid) {
       vid.muted = false;
-      vid.volume = 0.85;
+      vid.volume = 0.25; // Zacht achtergrondgeluid zoals verzocht
       const playPromise = vid.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
@@ -2727,7 +2845,7 @@
         muted = !muted;
         vid.muted = muted;
         if (!muted) {
-          vid.volume = 0.85;
+          vid.volume = 0.25;
           vid.play().catch(() => {});
         }
         if (muteIcon) muteIcon.textContent = muted ? 'volume_off' : 'volume_up';
@@ -2810,7 +2928,7 @@
               <span class="text-xs font-bold text-white drop-shadow">${storyUser}</span>
               <span class="text-[10px] text-stone-300">2u</span>
             </div>
-            <button type="button" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'feed')" class="text-white hover:text-stone-300 p-1">
+            <button type="button" onclick="window.playerApp.goBack()" class="text-white hover:text-stone-300 p-1 cursor-pointer" title="Terug">
               <span class="material-symbols-outlined text-2xl">close</span>
             </button>
           </div>
@@ -2826,7 +2944,7 @@
           <button type="button" onclick="if(window.sounds) window.sounds.playLike()" class="text-white hover:text-rose-500">
             <span class="material-symbols-outlined text-2xl">favorite</span>
           </button>
-          <button type="button" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'feed')" class="text-white hover:text-stone-300">
+          <button type="button" onclick="window.playerApp.goBack()" class="text-white hover:text-stone-300">
             <span class="material-symbols-outlined text-2xl">send</span>
           </button>
         </div>
@@ -2843,8 +2961,8 @@
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto select-none">
         <!-- Explore Search Bar met Terugknop -->
         <div class="pt-12 px-4 pb-2.5 bg-black/95 sticky top-0 z-20 border-b border-stone-800 flex items-center gap-2">
-          <button type="button" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'feed')" class="text-white hover:text-stone-300 p-1 flex items-center justify-center cursor-pointer" title="Terug naar feed">
-            <span class="material-symbols-outlined text-2xl">arrow_back</span>
+          <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-stone-900/80 hover:bg-stone-800 text-white flex items-center justify-center cursor-pointer transition active:scale-95 border border-white/20 shrink-0" title="Terug naar feed">
+            <span class="material-symbols-outlined text-xl">arrow_back</span>
           </button>
           <div class="flex-1 flex items-center gap-2 bg-stone-900 border border-stone-800 rounded-xl px-3 py-2">
             <span class="material-symbols-outlined text-stone-400 text-lg">search</span>
@@ -2855,7 +2973,7 @@
         <!-- Explore Grid van Foto's en Video's -->
         <div class="flex-1 overflow-y-auto grid grid-cols-3 gap-0.5 pb-20">
           ${Array.from({ length: 15 }).map((_, idx) => `
-            <div class="aspect-square bg-stone-900 overflow-hidden relative cursor-pointer hover:opacity-90" onclick="window.playerApp.renderInstagramReel(document.getElementById('app-view-container'), window.playerApp.getFeedVideo(${idx}), 'explore')">
+            <div class="aspect-square bg-stone-900 overflow-hidden relative cursor-pointer hover:opacity-90" onclick="window.playerApp.openReelFromFeed(${idx})">
               <img src="${getRandomPicsumUrl(300, 300)}" class="w-full h-full object-cover" alt="Explore">
               ${idx % 3 === 0 ? `<span class="material-symbols-outlined absolute top-1.5 right-1.5 text-white text-sm drop-shadow">movie</span>` : ''}
             </div>
@@ -2864,11 +2982,11 @@
 
         <!-- Bottom Nav -->
         <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto h-12 bg-black/95 backdrop-blur-md border-t border-stone-800 flex items-center justify-around z-20 px-2">
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'feed')"><span class="material-symbols-outlined text-2xl">home</span></button>
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openInstagramTab('feed')"><span class="material-symbols-outlined text-2xl">home</span></button>
           <button type="button" class="text-white"><span class="material-symbols-outlined text-2xl">search</span></button>
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramReel(document.getElementById('app-view-container'), window.playerApp.getFeedVideo(0), 'feed')"><span class="material-symbols-outlined text-2xl">movie</span></button>
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramActivity(document.getElementById('app-view-container'))"><span class="material-symbols-outlined text-2xl">favorite_border</span></button>
-          <button type="button" class="w-6 h-6 rounded-full overflow-hidden border border-stone-400 cursor-pointer" onclick="window.playerApp.renderInstagramProfile(document.getElementById('app-view-container'))">
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openReelFromFeed(0)"><span class="material-symbols-outlined text-2xl">movie</span></button>
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openInstagramTab('activity')"><span class="material-symbols-outlined text-2xl">favorite_border</span></button>
+          <button type="button" class="w-6 h-6 rounded-full overflow-hidden border border-stone-400 cursor-pointer" onclick="window.playerApp.openInstagramTab('profile')">
             <img src="${getRandomAvatarUrl()}" class="w-full h-full object-cover" alt="Profile">
           </button>
         </div>
@@ -2892,8 +3010,8 @@
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto select-none">
         <div class="pt-12 px-4 pb-3 border-b border-stone-800 flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <button type="button" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'feed')" class="text-white hover:text-stone-300 p-1 flex items-center justify-center cursor-pointer" title="Terug naar feed">
-              <span class="material-symbols-outlined text-2xl">arrow_back</span>
+            <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-stone-900/80 hover:bg-stone-800 text-white flex items-center justify-center cursor-pointer transition active:scale-95 border border-white/20 shrink-0" title="Terug">
+              <span class="material-symbols-outlined text-xl">arrow_back</span>
             </button>
             <h2 class="text-lg font-bold text-white">Meldingen</h2>
           </div>
@@ -2919,11 +3037,11 @@
 
         <!-- Bottom Nav -->
         <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto h-12 bg-black/95 backdrop-blur-md border-t border-stone-800 flex items-center justify-around z-20 px-2">
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'feed')"><span class="material-symbols-outlined text-2xl">home</span></button>
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramExplore(document.getElementById('app-view-container'))"><span class="material-symbols-outlined text-2xl">search</span></button>
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramReel(document.getElementById('app-view-container'), window.playerApp.getFeedVideo(0), 'feed')"><span class="material-symbols-outlined text-2xl">movie</span></button>
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openInstagramTab('feed')"><span class="material-symbols-outlined text-2xl">home</span></button>
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openInstagramTab('explore')"><span class="material-symbols-outlined text-2xl">search</span></button>
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openReelFromFeed(0)"><span class="material-symbols-outlined text-2xl">movie</span></button>
           <button type="button" class="text-white"><span class="material-symbols-outlined text-2xl">favorite</span></button>
-          <button type="button" class="w-6 h-6 rounded-full overflow-hidden border border-stone-400 cursor-pointer" onclick="window.playerApp.renderInstagramProfile(document.getElementById('app-view-container'))">
+          <button type="button" class="w-6 h-6 rounded-full overflow-hidden border border-stone-400 cursor-pointer" onclick="window.playerApp.openInstagramTab('profile')">
             <img src="${getRandomAvatarUrl()}" class="w-full h-full object-cover" alt="Profile">
           </button>
         </div>
@@ -2931,7 +3049,7 @@
     `;
   }
 
-  // INSTAGRAM PROFIEL TAB (MET VERPLICHTE TERUGKNOP NAAR FEED & SPEURTOCHT)
+  // INSTAGRAM PROFIEL TAB
   function renderInstagramProfile(container) {
     closeInstagramComments();
 
@@ -2939,15 +3057,10 @@
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto select-none">
         <div class="sticky top-0 z-30 pt-12 px-4 pb-3 bg-black border-b border-stone-800 flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <button type="button" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'feed')" class="text-white hover:text-stone-300 p-1 flex items-center gap-1 font-bold text-sm cursor-pointer" title="Terug naar feed">
-              <span class="material-symbols-outlined text-2xl">arrow_back</span>
+            <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-stone-900/80 hover:bg-stone-800 text-white flex items-center justify-center cursor-pointer transition active:scale-95 border border-white/20 shrink-0" title="Terug">
+              <span class="material-symbols-outlined text-xl">arrow_back</span>
             </button>
             <span class="font-bold text-sm">@${(state.playerName || 'speler').toLowerCase().replace(/\s+/g, '_')}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold shadow active:scale-95 transition flex items-center gap-1 cursor-pointer">
-              <span>✕ Speurtocht</span>
-            </button>
           </div>
         </div>
 
@@ -2967,7 +3080,7 @@
 
           <div class="px-4 text-left space-y-1">
             <div class="font-bold text-xs">${state.playerName || 'Speler'}</div>
-            <div class="text-[11px] text-stone-300">Deelnemer aan Speurtocht voor de Toekomst 🚀</div>
+            <div class="text-[11px] text-stone-300">Explore, connect & chill ✨</div>
           </div>
 
           <!-- Profiel Grid -->
@@ -2982,11 +3095,11 @@
 
         <!-- Bottom Nav -->
         <div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto h-12 bg-black/95 backdrop-blur-md border-t border-stone-800 flex items-center justify-around z-20 px-2">
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramApp(document.getElementById('app-view-container'), 'feed')"><span class="material-symbols-outlined text-2xl">home</span></button>
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramExplore(document.getElementById('app-view-container'))"><span class="material-symbols-outlined text-2xl">search</span></button>
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramReel(document.getElementById('app-view-container'), window.playerApp.getFeedVideo(0), 'feed')"><span class="material-symbols-outlined text-2xl">movie</span></button>
-          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.renderInstagramActivity(document.getElementById('app-view-container'))"><span class="material-symbols-outlined text-2xl">favorite_border</span></button>
-          <button type="button" class="w-6 h-6 rounded-full overflow-hidden border-2 border-white cursor-pointer">
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openInstagramTab('feed')"><span class="material-symbols-outlined text-2xl">home</span></button>
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openInstagramTab('explore')"><span class="material-symbols-outlined text-2xl">search</span></button>
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openReelFromFeed(0)"><span class="material-symbols-outlined text-2xl">movie</span></button>
+          <button type="button" class="text-stone-400 hover:text-white" onclick="window.playerApp.openInstagramTab('activity')"><span class="material-symbols-outlined text-2xl">favorite_border</span></button>
+          <button type="button" class="w-6 h-6 rounded-full overflow-hidden border-2 border-white cursor-pointer" onclick="window.playerApp.openInstagramTab('profile')">
             <img src="${getRandomAvatarUrl()}" class="w-full h-full object-cover" alt="Profile">
           </button>
         </div>
@@ -3069,11 +3182,10 @@
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto relative select-none">
         
-        <!-- TikTok Tabs Bovenin (Volgend & Voor jou interactief + Terugknop naar Speurtocht) -->
+        <!-- TikTok Tabs Bovenin (Volgend & Voor jou interactief + Terugknop) -->
         <div class="pt-12 pb-2 px-3 flex items-center justify-between z-20 bg-gradient-to-b from-black/90 to-transparent sticky top-0">
-          <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold flex items-center gap-1 shadow-lg active:scale-95 transition cursor-pointer" title="Terug naar speurtocht">
-            <span class="material-symbols-outlined text-sm">arrow_back</span>
-            <span>✕ Speurtocht</span>
+          <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-stone-900/80 border border-white/20 flex items-center justify-center text-white cursor-pointer active:scale-95 transition hover:bg-stone-800" title="Terug">
+            <span class="material-symbols-outlined text-xl">arrow_back</span>
           </button>
           
           <div class="flex items-center gap-6 text-sm font-bold">
@@ -3127,7 +3239,7 @@
     vids.forEach(v => {
       v.muted = state.reelsMuted;
       if (!state.reelsMuted) {
-        v.volume = 0.85;
+        v.volume = 0.25;
         v.play().catch(() => {});
       }
     });
@@ -3263,7 +3375,7 @@
       const vid = reelEl.querySelector('.tiktok-video-el');
       if (vid) {
         vid.muted = state.reelsMuted;
-        vid.volume = 0.85;
+        vid.volume = 0.25;
         const p = vid.play();
         if (p !== undefined) {
           p.catch(() => {
@@ -3338,11 +3450,10 @@
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto overflow-y-auto select-none">
         
-        <!-- BeReal Header met Terugknop naar Speurtocht -->
+        <!-- BeReal Header met Terugknop -->
         <div class="sticky top-0 z-30 pt-12 px-3 pb-2.5 bg-black/95 backdrop-blur-md flex items-center justify-between border-b border-stone-800">
-          <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold flex items-center gap-1 shadow cursor-pointer active:scale-95 transition" title="Terug naar speurtocht">
-            <span class="material-symbols-outlined text-sm">arrow_back</span>
-            <span>✕ Speurtocht</span>
+          <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-stone-900/80 border border-white/20 flex items-center justify-center text-white cursor-pointer active:scale-95 transition hover:bg-stone-800" title="Terug">
+            <span class="material-symbols-outlined text-xl">arrow_back</span>
           </button>
           
           <div class="flex flex-col items-center">
@@ -3350,7 +3461,7 @@
             <span class="text-[10px] text-amber-400 font-bold">⚠️ 2 min te laat</span>
           </div>
 
-          <div class="w-16"></div>
+          <div class="w-8"></div>
         </div>
 
         <div class="p-4 flex-1">
@@ -3379,7 +3490,7 @@
             <button type="button" class="text-2xl active:scale-125 transition" onclick="if(window.sounds) window.sounds.playCameraShutter()">⚡</button>
           </div>
 
-          <button type="button" onclick="window.playerApp.openAppFeed('Instagram')" class="w-full py-3 bg-stone-800 rounded-xl text-xs font-bold text-white">
+          <button type="button" onclick="window.playerApp.openInstagramTab('feed')" class="w-full py-3 bg-stone-800 rounded-xl text-xs font-bold text-white cursor-pointer active:scale-95 transition hover:bg-stone-700">
             Wissel naar Instagram Feed 📸
           </button>
         </div>
@@ -3397,9 +3508,8 @@
         
         <div class="absolute top-12 left-0 right-0 z-20 px-3 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent pb-4">
           <div class="flex items-center gap-2">
-            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-rose-600/90 hover:bg-rose-600 text-white text-[11px] font-bold flex items-center gap-1 shadow cursor-pointer active:scale-95 transition" title="Terug naar speurtocht">
-              <span class="material-symbols-outlined text-sm">arrow_back</span>
-              <span>✕ Speurtocht</span>
+            <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-black/60 border border-white/20 flex items-center justify-center text-white cursor-pointer active:scale-95 transition hover:bg-black/80" title="Terug">
+              <span class="material-symbols-outlined text-xl">arrow_back</span>
             </button>
             <div class="w-7 h-7 rounded-full bg-amber-400 text-black flex items-center justify-center font-bold text-xs">👻</div>
             <div class="flex flex-col text-left">
@@ -3414,7 +3524,7 @@
           <img src="${snapPhoto}" class="w-full h-full object-cover" alt="Snap">
           <!-- Karakteristieke zwarte Snapchat tekstbalk -->
           <div class="absolute top-1/2 left-0 right-0 bg-black/60 py-2.5 px-4 text-center">
-            <p class="text-xs font-bold text-white tracking-wide">Speurtocht is bezig, wie heeft autosleutels gevonden?? 😂</p>
+            <p class="text-xs font-bold text-white tracking-wide">Wie gaat er vanavond mee wat drinken in de stad?? 🍹🍕</p>
           </div>
         </div>
 
@@ -3431,91 +3541,106 @@
     `;
   }
 
-  // 5. WHATSAPP CHAT INTERFACE (MET BERICHT VAN MOEDER EN DUIDELIJKE TERUGKNOP)
-  function renderWhatsAppApp(container) {
-    container.innerHTML = `
-      <div class="w-full h-full flex flex-col bg-[#0b141a] text-white max-w-md mx-auto select-none">
-        
-        <!-- WhatsApp Header met Terugknop naar Chats & Speurtocht -->
-        <div class="sticky top-0 z-30 pt-12 px-3 pb-3 bg-[#202c33] flex items-center justify-between border-b border-stone-800">
-          <div class="flex items-center gap-2 min-w-0">
-            <button type="button" onclick="window.playerApp.renderWhatsAppChats(document.getElementById('app-view-container'))" class="text-white hover:text-stone-300 p-1.5 -ml-1 rounded-full hover:bg-white/10 flex items-center justify-center cursor-pointer transition shrink-0" title="Terug naar chats">
-              <span class="material-symbols-outlined text-2xl">arrow_back</span>
-            </button>
-            <div class="w-9 h-9 rounded-full bg-emerald-700 flex items-center justify-center text-lg font-bold shadow shrink-0">👩</div>
-            <div class="flex flex-col text-left min-w-0">
-              <span class="text-xs font-bold text-white truncate">Moeder ❤️</span>
-              <span class="text-[10px] text-emerald-400 font-medium">online</span>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 shadow cursor-pointer active:scale-95 transition" title="Terug naar speurtocht">
-              <span>✕ Speurtocht</span>
-            </button>
-          </div>
-        </div>
+  // ==========================================
+  // 5. WHATSAPP BERICHTEN & MEERDERE REALISTISCHE CHATS
+  // ==========================================
+  const WHATSAPP_CHATS = [
+    {
+      id: 'moeder',
+      name: 'Moeder ❤️',
+      avatar: '👩',
+      avatarBg: 'bg-emerald-700',
+      isEmoji: true,
+      status: 'online',
+      time: '12:32',
+      unread: 1,
+      preview: 'Kijk deze video die oma net stuurde! 😂',
+      messages: [
+        { type: 'text', sender: 'them', text: 'Heb je deze leuke video al gezien? 😂', time: '12:30' },
+        { type: 'video', sender: 'them', videoIndex: 2, caption: 'Kijk deze video die oma net stuurde! 😂', time: '12:32' },
+        { type: 'text', sender: 'them', text: 'Moest meteen aan jou denken haha!', time: '12:33' }
+      ]
+    },
+    {
+      id: 'vriendengroep',
+      name: 'Vriendengroep 🍕',
+      avatar: '🍕',
+      avatarBg: 'bg-amber-600',
+      isEmoji: true,
+      status: 'Liam, Emma, Sander...',
+      time: '12:15',
+      unread: 3,
+      preview: 'Sander: Pizzeria klinkt top, wie is erbij? 🍕🍻',
+      messages: [
+        { type: 'text', sender: 'Liam', text: 'Gaan we vanavond nog wat drinken in de stad?', time: '12:08' },
+        { type: 'text', sender: 'Emma', text: 'Ja gezellig!! Eerst terrasje of meteen hapje eten?', time: '12:11' },
+        { type: 'text', sender: 'Sander', text: 'Pizzeria klinkt top, wie is er allemaal bij? 🍕🍻', time: '12:15' }
+      ]
+    },
+    {
+      id: 'sarah',
+      name: 'Sarah van Dijk ✨',
+      avatar: 'https://i.pravatar.cc/150?img=49',
+      avatarBg: 'bg-stone-700',
+      isEmoji: false,
+      status: 'online',
+      time: '11:58',
+      unread: 1,
+      preview: '🎬 Check deze clip ga helemaal stuk 😂',
+      messages: [
+        { type: 'text', sender: 'them', text: 'Hey! Alles goed vandaag?', time: '11:55' },
+        { type: 'video', sender: 'them', videoIndex: 3, caption: 'Kijk deze clip haha, ga helemaal stuk 😂', time: '11:58' },
+        { type: 'text', sender: 'them', text: 'Echt geniaal haha!', time: '11:59' }
+      ]
+    },
+    {
+      id: 'lars',
+      name: 'Lars Visser ⚽',
+      avatar: 'https://i.pravatar.cc/150?img=15',
+      avatarBg: 'bg-stone-800',
+      isEmoji: false,
+      status: 'online',
+      time: '11:30',
+      unread: 0,
+      preview: 'Heb je die goal gisteren gezien?? 🔥',
+      messages: [
+        { type: 'text', sender: 'them', text: 'Yo! Heb je gisteren die goal in de 90e minuut gezien?? ⚽🔥', time: '11:28' },
+        { type: 'text', sender: 'them', text: 'Echt niet normaal haha, we moeten snel weer een potje spelen man', time: '11:30' }
+      ]
+    },
+    {
+      id: 'thomas',
+      name: 'Thomas 🎮',
+      avatar: 'https://i.pravatar.cc/150?img=12',
+      avatarBg: 'bg-purple-800',
+      isEmoji: false,
+      status: 'online',
+      time: '11:12',
+      unread: 0,
+      preview: 'Ben je straks online voor een game?',
+      messages: [
+        { type: 'text', sender: 'them', text: 'Hey man, ben je straks online? Even een game spelen vanavond 🎮', time: '11:10' },
+        { type: 'text', sender: 'them', text: 'Laat maar weten als je er bent!', time: '11:12' }
+      ]
+    }
+  ];
 
-        <!-- Chat Berichten van Moeder -->
-        <div class="flex-1 p-4 space-y-3 overflow-y-auto text-left">
-          <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-[#202c33] text-xs text-stone-100 shadow">
-            Vergeet je fietssleutels straks niet mee te nemen! En hoe gaat de speurtocht? ❤️
-            <span class="text-[9px] text-stone-400 block text-right mt-1">12:30</span>
-          </div>
-
-          <!-- KLIKBARE REEL / VIDEO VAN OMA MET TERUGKEER NAAR WHATSAPP -->
-          <div class="max-w-[85%] rounded-2xl rounded-tl-none bg-[#202c33] border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-[#00a884] transition transform active:scale-95 group" onclick="window.playerApp.renderInstagramReel(document.getElementById('app-view-container'), window.playerApp.getFeedVideo(2), 'whatsapp')">
-            <div class="relative w-full h-44 bg-black overflow-hidden">
-              <video src="${FEED_OPEN_VIDEOS[2].url}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" autoplay loop muted playsinline></video>
-              <div class="absolute inset-0 bg-black/30 flex items-center justify-center">
-                <div class="w-12 h-12 rounded-full bg-black/75 border border-white/50 flex items-center justify-center text-white shadow-xl group-hover:scale-110 transition">
-                  <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
-                </div>
-              </div>
-              <span class="absolute top-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded text-[9px] font-bold text-white flex items-center gap-1">
-                🎬 Open Source Video
-              </span>
-              <span class="absolute bottom-2 right-2 bg-[#00a884] text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow">
-                <span>Bekijk video</span>
-                <span class="material-symbols-outlined text-[11px]">arrow_forward</span>
-              </span>
-            </div>
-            <div class="p-2.5 text-xs text-stone-100">
-              <p class="font-medium">Kijk deze video die oma net stuurde! 😂</p>
-              <span class="text-[9px] text-stone-400 block text-right mt-1">12:32</span>
-            </div>
-          </div>
-
-          <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-[#202c33] text-xs text-stone-100 shadow">
-            Doe je best lieverd! Geen TikTok kijken tijdens het speuren hoor 😉
-            <span class="text-[9px] text-stone-400 block text-right mt-1">12:33</span>
-          </div>
-        </div>
-
-        <!-- Input balk -->
-        <div class="p-3 bg-[#202c33] flex items-center gap-2">
-          <input type="text" placeholder="Typ een bericht aan Moeder..." class="flex-1 bg-[#2a3942] border border-transparent rounded-full py-2 px-3 text-xs text-white placeholder-stone-400 focus:outline-none">
-          <div class="w-9 h-9 rounded-full bg-[#00a884] flex items-center justify-center text-white cursor-pointer" onclick="if(window.sounds) window.sounds.playClick()">
-            <span class="material-symbols-outlined text-[18px]">send</span>
-          </div>
-        </div>
-
-      </div>
-    `;
+  function openWhatsAppChat(chatId) {
+    pushTrapView('whatsapp_chat', { chatId });
+    renderWhatsAppChat(document.getElementById('app-view-container'), chatId);
   }
 
-  // WHATSAPP CHATS OVERZICHT (INBOX) MET TERUGKNOP NAAR SPEL
   function renderWhatsAppChats(container) {
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-[#0b141a] text-white max-w-md mx-auto select-none">
         
-        <!-- WhatsApp Inbox Header met Terugknop naar Speurtocht -->
+        <!-- WhatsApp Inbox Header met Terugknop -->
         <div class="sticky top-0 z-30 pt-12 px-4 pb-3 bg-[#202c33] flex items-center justify-between border-b border-stone-800">
-          <div class="flex items-center gap-2">
-            <button type="button" onclick="window.playerApp.exitTrap()" class="px-2.5 py-1 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow cursor-pointer active:scale-95 transition" title="Sluit WhatsApp">
-              <span class="material-symbols-outlined text-sm">arrow_back</span>
-              <span>✕ Speurtocht</span>
+          <div class="flex items-center gap-3">
+            <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer active:scale-95 transition" title="Terug">
+              <span class="material-symbols-outlined text-xl">arrow_back</span>
             </button>
-            <span class="text-base font-bold text-white ml-2">WhatsApp</span>
+            <span class="text-base font-bold text-white">WhatsApp</span>
           </div>
           <div class="flex items-center gap-3 text-stone-300">
             <span class="material-symbols-outlined text-[20px]">photo_camera</span>
@@ -3526,53 +3651,110 @@
 
         <!-- Tabs -->
         <div class="bg-[#202c33] px-4 flex items-center border-b border-stone-800 text-xs font-bold">
-          <div class="flex-1 py-2.5 text-center text-[#00a884] border-b-2 border-[#00a884]">CHATS (1)</div>
+          <div class="flex-1 py-2.5 text-center text-[#00a884] border-b-2 border-[#00a884]">CHATS (${WHATSAPP_CHATS.length})</div>
           <div class="flex-1 py-2.5 text-center text-stone-400">STATUS</div>
           <div class="flex-1 py-2.5 text-center text-stone-400">OPROEPEN</div>
         </div>
 
-        <!-- Chats Lijst -->
+        <!-- Chats Lijst met 5 verschillende gesprekken -->
         <div class="flex-1 overflow-y-auto divide-y divide-stone-800/60 text-left">
-          
-          <!-- Chat 1: Moeder (Nieuw bericht!) -->
-          <div class="p-3.5 flex items-center gap-3 hover:bg-[#202c33]/50 cursor-pointer transition active:scale-[0.99]" onclick="window.playerApp.renderWhatsAppApp(document.getElementById('app-view-container'))">
-            <div class="w-12 h-12 rounded-full bg-emerald-700 flex items-center justify-center text-2xl shadow shrink-0">👩</div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-white">Moeder ❤️</span>
-                <span class="text-[10px] text-[#00a884] font-semibold">12:32</span>
+          ${WHATSAPP_CHATS.map(chat => `
+            <div class="p-3.5 flex items-center gap-3 hover:bg-[#202c33]/50 cursor-pointer transition active:scale-[0.99]" onclick="window.playerApp.openWhatsAppChat('${chat.id}')">
+              <div class="w-12 h-12 rounded-full ${chat.avatarBg} flex items-center justify-center text-2xl shadow shrink-0 overflow-hidden">
+                ${chat.isEmoji ? chat.avatar : `<img src="${chat.avatar}" class="w-full h-full object-cover" alt="${chat.name}">`}
               </div>
-              <div class="flex items-center justify-between mt-0.5">
-                <p class="text-xs text-stone-300 truncate pr-2">Kijk deze video die oma net stuurde! 😂</p>
-                <span class="w-5 h-5 rounded-full bg-[#00a884] text-black text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-white truncate">${chat.name}</span>
+                  <span class="text-[10px] ${chat.unread > 0 ? 'text-[#00a884] font-bold' : 'text-stone-400 font-semibold'}">${chat.time}</span>
+                </div>
+                <div class="flex items-center justify-between mt-0.5">
+                  <p class="text-xs ${chat.unread > 0 ? 'text-stone-200 font-medium' : 'text-stone-400'} truncate pr-2">${chat.preview}</p>
+                  ${chat.unread > 0 ? `<span class="w-5 h-5 rounded-full bg-[#00a884] text-black text-[10px] font-bold flex items-center justify-center shrink-0 shadow">${chat.unread}</span>` : ''}
+                </div>
               </div>
             </div>
-          </div>
+          `).join('')}
+        </div>
 
-          <!-- Chat 2: Familie App -->
-          <div class="p-3.5 flex items-center gap-3 hover:bg-[#202c33]/50 cursor-pointer transition active:scale-[0.99]" onclick="window.playerApp.renderWhatsAppApp(document.getElementById('app-view-container'))">
-            <div class="w-12 h-12 rounded-full bg-amber-600 flex items-center justify-center text-2xl shadow shrink-0">👨‍👩‍👧‍👦</div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-white">Familie App ❤️</span>
-                <span class="text-[10px] text-stone-400 font-semibold">11:45</span>
-              </div>
-              <p class="text-xs text-stone-400 truncate mt-0.5">Oma: "Veel succes vandaag schat! 🍀"</p>
+      </div>
+    `;
+  }
+
+  function renderWhatsAppChat(container, chatId = 'moeder') {
+    const chat = WHATSAPP_CHATS.find(c => c.id === chatId) || WHATSAPP_CHATS[0];
+
+    container.innerHTML = `
+      <div class="w-full h-full flex flex-col bg-[#0b141a] text-white max-w-md mx-auto select-none">
+        
+        <!-- WhatsApp Chat Header met Terugknop naar Inbox -->
+        <div class="sticky top-0 z-30 pt-12 px-3 pb-3 bg-[#202c33] flex items-center justify-between border-b border-stone-800">
+          <div class="flex items-center gap-2 min-w-0">
+            <button type="button" onclick="window.playerApp.goBack()" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition active:scale-95 shrink-0" title="Terug naar chats">
+              <span class="material-symbols-outlined text-xl">arrow_back</span>
+            </button>
+            <div class="w-9 h-9 rounded-full ${chat.avatarBg} flex items-center justify-center text-lg font-bold shadow shrink-0 overflow-hidden">
+              ${chat.isEmoji ? chat.avatar : `<img src="${chat.avatar}" class="w-full h-full object-cover" alt="${chat.name}">`}
+            </div>
+            <div class="flex flex-col text-left min-w-0">
+              <span class="text-xs font-bold text-white truncate">${chat.name}</span>
+              <span class="text-[10px] text-emerald-400 font-medium">${chat.status}</span>
             </div>
           </div>
-
-          <!-- Chat 3: Groepsapp -->
-          <div class="p-3.5 flex items-center gap-3 hover:bg-[#202c33]/50 cursor-pointer transition opacity-70">
-            <div class="w-12 h-12 rounded-full bg-sky-700 flex items-center justify-center text-2xl shadow shrink-0">⚡</div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-white">Speurtocht Groepsapp</span>
-                <span class="text-[10px] text-stone-400 font-semibold">10:15</span>
-              </div>
-              <p class="text-xs text-stone-400 truncate mt-0.5">Daan: "Denk aan de klok, blijf gefocust!"</p>
-            </div>
+          <div class="flex items-center gap-3 text-stone-300">
+            <span class="material-symbols-outlined text-[20px]">videocam</span>
+            <span class="material-symbols-outlined text-[20px]">call</span>
+            <span class="material-symbols-outlined text-[20px]">more_vert</span>
           </div>
+        </div>
 
+        <!-- Chat Berichten -->
+        <div class="flex-1 p-4 space-y-3 overflow-y-auto text-left">
+          ${chat.messages.map(m => {
+            if (m.type === 'text') {
+              return `
+                <div class="max-w-[80%] p-3 rounded-2xl rounded-tl-none bg-[#202c33] text-xs text-stone-100 shadow">
+                  ${m.sender && m.sender !== 'them' ? `<span class="text-[11px] font-bold text-[#00a884] block mb-0.5">${m.sender}</span>` : ''}
+                  ${m.text}
+                  <span class="text-[9px] text-stone-400 block text-right mt-1">${m.time}</span>
+                </div>
+              `;
+            } else if (m.type === 'video') {
+              const vObj = FEED_OPEN_VIDEOS[m.videoIndex % FEED_OPEN_VIDEOS.length];
+              return `
+                <div class="max-w-[85%] rounded-2xl rounded-tl-none bg-[#202c33] border border-stone-700 overflow-hidden shadow-xl cursor-pointer hover:border-[#00a884] transition transform active:scale-95 group" onclick="window.playerApp.openReelFromChat(${m.videoIndex}, 'whatsapp', '${chat.id}')">
+                  <div class="relative w-full h-44 bg-black overflow-hidden">
+                    <video src="${vObj.url}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" autoplay loop muted playsinline></video>
+                    <div class="absolute inset-0 bg-black/30 flex items-center justify-center">
+                      <div class="w-12 h-12 rounded-full bg-black/75 border border-white/50 flex items-center justify-center text-white shadow-xl group-hover:scale-110 transition">
+                        <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                      </div>
+                    </div>
+                    <span class="absolute top-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded text-[9px] font-bold text-white flex items-center gap-1">
+                      🎬 Video Clip
+                    </span>
+                    <span class="absolute bottom-2 right-2 bg-[#00a884] text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow">
+                      <span>Bekijk video</span>
+                      <span class="material-symbols-outlined text-[11px]">arrow_forward</span>
+                    </span>
+                  </div>
+                  <div class="p-2.5 text-xs text-stone-100">
+                    <p class="font-medium">${m.caption}</p>
+                    <span class="text-[9px] text-stone-400 block text-right mt-1">${m.time}</span>
+                  </div>
+                </div>
+              `;
+            }
+            return '';
+          }).join('')}
+        </div>
+
+        <!-- Input balk -->
+        <div class="p-3 bg-[#202c33] flex items-center gap-2">
+          <input type="text" placeholder="Typ een bericht..." class="flex-1 bg-[#2a3942] border border-transparent rounded-full py-2 px-3.5 text-xs text-white placeholder-stone-400 focus:outline-none">
+          <div class="w-9 h-9 rounded-full bg-[#00a884] flex items-center justify-center text-white cursor-pointer active:scale-95 transition" onclick="if(window.sounds) window.sounds.playClick()">
+            <span class="material-symbols-outlined text-[18px]">send</span>
+          </div>
         </div>
 
       </div>
@@ -3582,6 +3764,8 @@
   function exitTrap() {
     const secondsSpent = Math.round((Date.now() - (state.trapStartTime || Date.now())) / 1000);
     state.inDoomscroll = false;
+    viewHistory = [];
+    currentTrapView = null;
     socket.emit('player:exit_doomscroll', { secondsSpent });
     screens.doomscrollTrap.classList.add('hidden');
     showScreen('gameplay');
@@ -3593,12 +3777,7 @@
     if (!exitBtn) return;
 
     exitBtn.addEventListener('click', () => {
-      const secondsSpent = Math.round((Date.now() - (state.trapStartTime || Date.now())) / 1000);
-      state.inDoomscroll = false;
-      socket.emit('player:exit_doomscroll', { secondsSpent });
-      screens.doomscrollTrap.classList.add('hidden');
-      showScreen('gameplay');
-      if (window.sounds) window.sounds.playClick();
+      goBack();
     });
   }
 
@@ -3851,6 +4030,7 @@
   // GLOBALE EXPORT VOOR INLINE HANDLERS
   // ==========================================
   window.playerApp = {
+    goBack,
     submitCode,
     openHintVideo,
     closeModal,
@@ -3869,8 +4049,16 @@
     renderInstagramExplore,
     renderInstagramActivity,
     renderInstagramProfile,
+    openInstagramTab,
+    openInstagramDM,
+    openInstagramStory,
+    openInstagramChat,
+    openReelFromFeed,
+    openReelFromChat,
     renderWhatsAppApp,
     renderWhatsAppChats,
+    renderWhatsAppChat,
+    openWhatsAppChat,
     renderTikTokApp,
     toggleFollowUser,
     isUserFollowed,
