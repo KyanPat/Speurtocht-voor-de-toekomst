@@ -108,8 +108,8 @@ async function runCompleteTest() {
     broadcastClaimToast = data.toastMessage;
   });
 
-  const code5 = await new Promise(res => player1.emit('item:verify_code', { itemId: 'job_interview', code: '4343' }, res));
-  if (!code5.success) throw new Error('Code 4343 mislukt');
+  const code5 = await new Promise(res => player1.emit('item:verify_code', { itemId: 'job_interview', code: '2413' }, res));
+  if (!code5.success) throw new Error('Code 2413 mislukt');
   const item5Res = await new Promise(res => {
     player1.emit('item:submit_task', { itemId: 'job_interview', isCorrect: true }, res);
   });

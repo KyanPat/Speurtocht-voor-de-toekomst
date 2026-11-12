@@ -20,6 +20,7 @@
 
   <!-- Tailwind CSS CDN met plugins -->
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -140,14 +141,6 @@
           </button>
         </div>
 
-        <!-- Gelimiteerde Items Info -->
-        <div class="w-full bg-amber-50 rounded-xl p-2.5 border border-amber-200/80 mb-3 text-left flex items-center justify-between text-xs">
-          <div class="flex items-center gap-1.5 text-amber-900 font-bold">
-            <span class="material-symbols-outlined text-amber-600 text-base">stars</span>
-            <span>Gelimiteerde Items:</span>
-          </div>
-          <span id="wait-limited-stock-badge" class="font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300 font-mono text-[11px]">1x per item</span>
-        </div>
 
         <!-- Handige link naar Vindplekken (Geen digibord/qr link voor spelers) -->
         <div class="mt-4 pt-3 border-t border-stone-200/80 w-full flex items-center justify-center text-[11px] text-stone-500">
@@ -249,35 +242,44 @@
     <!-- ============================================== -->
     <!-- SCHERM 7: GAME OVER OVERLAY (MOBIELE VIEW)      -->
     <!-- ============================================== -->
-    <div id="screen-game-over" class="hidden fixed inset-0 z-50 bg-stone-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center select-none">
-      <div class="w-full max-w-[360px] bg-white rounded-3xl p-6 shadow-2xl border border-stone-200 flex flex-col items-center">
-        <div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center text-3xl mb-3 shadow-inner">
-          🏆
+    <div id="screen-game-over" class="hidden fixed inset-0 z-50 bg-stone-950/95 backdrop-blur-md flex flex-col items-center justify-start p-3 sm:p-5 text-center select-none overflow-y-auto">
+      <div class="w-full max-w-md bg-[#1a1c22] rounded-3xl p-5 shadow-2xl border border-stone-800 flex flex-col items-center my-auto">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-2xl">🏆</span>
+          <h2 class="font-display text-xl sm:text-2xl font-black text-white">Spel Afgelopen!</h2>
         </div>
-        <h2 class="font-display text-2xl font-black text-stone-900">Spel Afgelopen!</h2>
-        <p id="game-over-reason" class="text-xs text-stone-600 mt-1 mb-4">De 15 minuten zijn voorbij.</p>
+        <p id="game-over-reason" class="text-xs text-stone-400 mb-3">De speeltijd is verstreken.</p>
 
-        <!-- Jouw Resultaat Card -->
-        <div class="w-full bg-stone-50 rounded-2xl p-4 border border-stone-200 mb-4 flex flex-col gap-2">
-          <div class="flex justify-between items-center text-xs text-stone-600">
-            <span>Jouw Eindscore:</span>
-            <span id="final-player-score" class="font-bold text-primary text-base">0 pt</span>
+        <!-- Top 3 Winnaars Podium Container (Mobiel 2D Modellen Animatie) -->
+        <div class="w-full bg-[#13151b] rounded-2xl p-3 border border-stone-800/80 mb-3 shadow-inner">
+          <span class="text-[10px] font-bold text-amber-400 uppercase tracking-widest block mb-2">Eindpodium van de Klas</span>
+          <div id="mobile-podium-grid" class="grid grid-cols-3 gap-1.5 items-end min-h-[160px]">
+            <!-- Dynamisch gevuld met 2D character modellen -->
           </div>
-          <div class="flex justify-between items-center text-xs text-stone-600">
+        </div>
+
+        <!-- Jouw Persoonlijke Resultaat Card -->
+        <div class="w-full bg-stone-900/90 rounded-2xl p-3.5 border border-stone-800 mb-3 flex flex-col gap-1.5 text-left">
+          <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Jouw Resultaat</span>
+          <div class="flex justify-between items-center text-xs text-stone-300">
+            <span>Eindscore:</span>
+            <span id="final-player-score" class="font-bold text-emerald-400 text-sm">0 pt</span>
+          </div>
+          <div class="flex justify-between items-center text-xs text-stone-300">
             <span>Geclaimde Items:</span>
-            <span id="final-player-items" class="font-bold text-stone-900">0 / 7</span>
+            <span id="final-player-items" class="font-bold text-white text-xs">0 / 8</span>
           </div>
-          <div class="flex justify-between items-center text-xs text-stone-600">
+          <div class="flex justify-between items-center text-xs text-stone-300">
             <span>Zelfbeheersing Beloningen:</span>
-            <span id="final-self-control" class="font-bold text-emerald-700">0x (-0s)</span>
+            <span id="final-self-control" class="font-bold text-emerald-300 text-xs">0x (-0s)</span>
           </div>
-          <div class="flex justify-between items-center text-xs text-stone-600">
+          <div class="flex justify-between items-center text-xs text-stone-300">
             <span>Tijd in Doomscroll Val:</span>
-            <span id="final-doomscroll-time" class="font-bold text-rose-600">0 sec</span>
+            <span id="final-doomscroll-time" class="font-bold text-rose-400 text-xs">0 sec</span>
           </div>
         </div>
 
-        <button id="btn-restart-player" type="button" class="w-full py-3 px-4 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-sm shadow transition">
+        <button id="btn-restart-player" type="button" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs shadow-md transition cursor-pointer">
           Terug naar de Lobby
         </button>
       </div>
@@ -293,25 +295,25 @@
     }
   </script>
 
-  <!-- Applicatie Scripts met Cache Buster (v26) -->
-  <script src="/js/itemsData.js?v=26"></script>
-  <script src="/js/soundEffects.js?v=26"></script>
-  <script src="/js/notifications.js?v=26"></script>
-  <script src="/js/playerApp.js?v=26"></script>
+  <!-- Applicatie Scripts met Cache Buster (v27) -->
+  <script src="/js/itemsData.js?v=29"></script>
+  <script src="/js/soundEffects.js?v=29"></script>
+  <script src="/js/notifications.js?v=29"></script>
+  <script src="/js/playerApp.js?v=30"></script>
 
   <!-- PWA Service Worker registratie met forceer-update -->
   <script>
     if ('caches' in window) {
       caches.keys().then(keys => {
         keys.forEach(k => {
-          if (k !== 'doomscroll-escape-v26') caches.delete(k);
+          if (k !== 'doomscroll-escape-v30') caches.delete(k);
         });
       });
     }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=26')
+        navigator.serviceWorker.register('/sw.js?v=29')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);

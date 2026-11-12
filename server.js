@@ -600,12 +600,20 @@ function resetGame() {
     gameTimerInterval = null;
   }
 
-  // Bewaar aangepaste locaties en codes
+  // Bewaar aangepaste locaties, secret locaties, codes en maxClaims
   const savedLocations = {};
+  const savedSecretLocations = {};
   const savedCodes = {};
-  [...Object.values(gameState.generalItems), ...Object.values(gameState.limitedItems)].forEach(item => {
+  const savedMaxClaims = {};
+
+  Object.values(gameState.generalItems).forEach(item => {
     savedLocations[item.id] = item.location;
     savedCodes[item.id] = item.code;
+  });
+  Object.values(gameState.limitedItems).forEach(item => {
+    savedSecretLocations[item.id] = item.secretLocation || 'Locatie';
+    savedCodes[item.id] = item.code;
+    savedMaxClaims[item.id] = item.maxClaims || 1;
   });
 
   gameState.status = 'LOBBY';
@@ -613,14 +621,24 @@ function resetGame() {
   gameState.limitedItems = JSON.parse(JSON.stringify(INITIAL_LIMITED_ITEMS));
   gameState.generalItems = JSON.parse(JSON.stringify(INITIAL_GENERAL_ITEMS));
 
-  // Herstel eventuele aangepaste locaties en codes
+  // Herstel eventuele aangepaste locaties, secret locaties, codes en maxClaims
   Object.keys(savedLocations).forEach(id => {
     if (gameState.generalItems[id] && savedLocations[id]) gameState.generalItems[id].location = savedLocations[id];
-    if (gameState.limitedItems[id] && savedLocations[id]) gameState.limitedItems[id].location = savedLocations[id];
+  });
+  Object.keys(savedSecretLocations).forEach(id => {
+    if (gameState.limitedItems[id] && savedSecretLocations[id]) {
+      gameState.limitedItems[id].secretLocation = savedSecretLocations[id];
+      gameState.limitedItems[id].location = '❓ Verborgen (Los taak op)';
+    }
   });
   Object.keys(savedCodes).forEach(id => {
     if (gameState.generalItems[id] && savedCodes[id]) gameState.generalItems[id].code = savedCodes[id];
     if (gameState.limitedItems[id] && savedCodes[id]) gameState.limitedItems[id].code = savedCodes[id];
+  });
+  Object.keys(savedMaxClaims).forEach(id => {
+    if (gameState.limitedItems[id] && savedMaxClaims[id]) {
+      gameState.limitedItems[id].maxClaims = savedMaxClaims[id];
+    }
   });
 
   gameState.jobRaiseUnlockTimerActive = false;
@@ -775,8 +793,14 @@ io.on('connection', (socket) => {
           if (itemUpdate.code !== undefined) gameState.generalItems[id].code = itemUpdate.code.trim();
         }
         if (gameState.limitedItems[id]) {
-          if (itemUpdate.location !== undefined) gameState.limitedItems[id].location = itemUpdate.location.trim();
+          if (itemUpdate.location !== undefined) {
+            gameState.limitedItems[id].secretLocation = itemUpdate.location.trim();
+            gameState.limitedItems[id].location = '❓ Verborgen (Los taak op)';
+          }
           if (itemUpdate.code !== undefined) gameState.limitedItems[id].code = itemUpdate.code.trim();
+          if (itemUpdate.maxClaims !== undefined) {
+            gameState.limitedItems[id].maxClaims = Math.max(1, parseInt(itemUpdate.maxClaims, 10));
+          }
         }
       });
     }

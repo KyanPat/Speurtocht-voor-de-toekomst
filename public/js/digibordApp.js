@@ -67,7 +67,6 @@
 
       syncItemsData();
       renderLobbyLocations();
-      updateLimitedQuickButtons();
       updateView();
     });
 
@@ -92,8 +91,8 @@
     socket.on('game:ended', (data) => {
       state.status = 'ENDED';
       state.leaderboard = data.leaderboard;
-      renderPodium(data.leaderboard, data.reason);
       updateView();
+      renderPodium(data.leaderboard, data.reason);
       if (window.sounds) window.sounds.playLimitedClaim();
     });
 
@@ -141,8 +140,10 @@
     ALL_ITEM_IDS.forEach(id => {
       const serverItem = state.limitedItems[id] || state.generalItems[id];
       if (serverItem && ITEMS_DATA[id]) {
+        if (serverItem.secretLocation) ITEMS_DATA[id].secretLocation = serverItem.secretLocation;
         if (serverItem.location) ITEMS_DATA[id].location = serverItem.location;
         if (serverItem.code) ITEMS_DATA[id].code = serverItem.code;
+        if (serverItem.maxClaims) ITEMS_DATA[id].maxClaims = serverItem.maxClaims;
       }
     });
   }
@@ -250,21 +251,6 @@
   // ==========================================
   // SPELINSTELLINGEN & LOCATIES MODAL
   // ==========================================
-  function updateLimitedQuickButtons() {
-    const max = state.limitedItemsMaxClaims || 1;
-    const b1 = document.getElementById('btn-quick-limited-1');
-    const b2 = document.getElementById('btn-quick-limited-2');
-    if (b1 && b2) {
-      if (max === 1) {
-        b1.className = 'px-2 py-0.5 rounded-md font-bold transition text-amber-300 bg-amber-950 border border-amber-600/60 cursor-pointer shadow-sm';
-        b2.className = 'px-2 py-0.5 rounded-md font-bold transition text-stone-400 hover:text-white cursor-pointer';
-      } else {
-        b1.className = 'px-2 py-0.5 rounded-md font-bold transition text-stone-400 hover:text-white cursor-pointer';
-        b2.className = 'px-2 py-0.5 rounded-md font-bold transition text-amber-300 bg-amber-950 border border-amber-600/60 cursor-pointer shadow-sm';
-      }
-    }
-  }
-
   function setupSettingsModal() {
     const btnHeaderSettings = document.getElementById('btn-header-settings');
     const btnLobbySettings = document.getElementById('btn-lobby-settings');
@@ -273,28 +259,6 @@
     const btnCancel = document.getElementById('btn-cancel-settings');
     const btnSave = document.getElementById('btn-save-settings');
     const btnReset = document.getElementById('btn-reset-defaults');
-    const btnQuickLim1 = document.getElementById('btn-quick-limited-1');
-    const btnQuickLim2 = document.getElementById('btn-quick-limited-2');
-
-    if (btnQuickLim1) {
-      btnQuickLim1.addEventListener('click', () => {
-        socket.emit('admin:set_limited_claims', { maxClaims: 1 });
-        state.limitedItemsMaxClaims = 1;
-        updateLimitedQuickButtons();
-        renderLobbyLocations();
-        if (window.sounds) window.sounds.playClick();
-      });
-    }
-
-    if (btnQuickLim2) {
-      btnQuickLim2.addEventListener('click', () => {
-        socket.emit('admin:set_limited_claims', { maxClaims: 2 });
-        state.limitedItemsMaxClaims = 2;
-        updateLimitedQuickButtons();
-        renderLobbyLocations();
-        if (window.sounds) window.sounds.playClick();
-      });
-    }
 
     const openModal = () => {
       renderSettingsInputs();
@@ -339,16 +303,11 @@
   function renderSettingsInputs() {
     const container = document.getElementById('settings-items-list');
     const durationSelect = document.getElementById('setting-game-duration');
-    const limitedSelect = document.getElementById('setting-limited-claims');
     if (!container) return;
 
     if (durationSelect) {
       const currentMins = Math.round(state.totalDuration / 60);
       durationSelect.value = String(currentMins);
-    }
-
-    if (limitedSelect) {
-      limitedSelect.value = String(state.limitedItemsMaxClaims || 1);
     }
 
     container.innerHTML = '';
@@ -366,6 +325,8 @@
 
       const card = document.createElement('div');
       card.className = 'bg-stone-950/80 p-3.5 rounded-2xl border border-stone-800 flex flex-col gap-2.5';
+      const itemMaxClaims = serverItem.maxClaims || state.limitedItemsMaxClaims || 1;
+
       card.innerHTML = `
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2 min-w-0">
@@ -373,19 +334,32 @@
             <span class="text-xs font-bold text-white truncate">${name}</span>
           </div>
           <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${isLimited ? 'bg-amber-950 text-amber-300 border border-amber-600/40' : 'bg-stone-800 text-stone-300'}">
-            ${isLimited ? `Limited (${state.limitedItemsMaxClaims || 1}x)` : 'Algemeen'}
+            ${isLimited ? `Limited Item` : 'Algemeen'}
           </span>
         </div>
 
-        <div class="grid grid-cols-3 gap-2">
-          <div class="col-span-2">
-            <label class="block text-[10px] text-stone-400 font-semibold mb-1">Fysieke Locatie</label>
+        <div class="grid ${isLimited ? 'grid-cols-5' : 'grid-cols-3'} gap-2">
+          <div class="${isLimited ? 'col-span-2' : 'col-span-2'}">
+            <label class="block text-[10px] text-stone-400 font-semibold mb-1">
+              ${isLimited ? 'Geheime Locatie (vindplek)' : 'Fysieke Locatie'}
+            </label>
             <input type="text" id="setting-loc-${id}" value="${location}" placeholder="Bijv. Kantine, Aula, Lokaal..." class="w-full bg-stone-900 border border-stone-700 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
           </div>
-          <div>
+          <div class="${isLimited ? 'col-span-2' : 'col-span-1'}">
             <label class="block text-[10px] text-stone-400 font-semibold mb-1">Code (4 cijfers)</label>
             <input type="text" id="setting-code-${id}" value="${code}" maxlength="4" placeholder="4222" class="w-full bg-stone-900 border border-stone-700 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-center text-emerald-400 focus:outline-none focus:border-emerald-500">
           </div>
+          ${isLimited ? `
+          <div class="col-span-1">
+            <label class="block text-[10px] text-amber-400 font-semibold mb-1">Voorraad</label>
+            <select id="setting-claims-${id}" class="w-full bg-stone-900 border border-amber-600/50 rounded-xl px-1.5 py-1.5 text-xs font-bold text-amber-300 focus:outline-none focus:border-amber-400">
+              <option value="1" ${itemMaxClaims === 1 ? 'selected' : ''}>1x</option>
+              <option value="2" ${itemMaxClaims === 2 ? 'selected' : ''}>2x</option>
+              <option value="3" ${itemMaxClaims === 3 ? 'selected' : ''}>3x</option>
+              <option value="4" ${itemMaxClaims === 4 ? 'selected' : ''}>4x</option>
+            </select>
+          </div>
+          ` : ''}
         </div>
       `;
       container.appendChild(card);
@@ -394,32 +368,31 @@
 
   function saveSettings(onSuccess) {
     const durationSelect = document.getElementById('setting-game-duration');
-    const limitedSelect = document.getElementById('setting-limited-claims');
     const durationMinutes = durationSelect ? parseInt(durationSelect.value, 10) : 15;
-    const limitedItemsMaxClaims = limitedSelect ? parseInt(limitedSelect.value, 10) : (state.limitedItemsMaxClaims || 1);
 
     const itemsUpdate = {};
     ALL_ITEM_IDS.forEach(id => {
       const locInput = document.getElementById(`setting-loc-${id}`);
       const codeInput = document.getElementById(`setting-code-${id}`);
+      const claimsSelect = document.getElementById(`setting-claims-${id}`);
       if (locInput && codeInput) {
         itemsUpdate[id] = {
           location: locInput.value.trim() || 'Lokaal',
           code: codeInput.value.trim() || '0000'
         };
+        if (claimsSelect) {
+          itemsUpdate[id].maxClaims = parseInt(claimsSelect.value, 10) || 1;
+        }
       }
     });
 
     socket.emit('settings:update', {
       durationMinutes,
-      limitedItemsMaxClaims,
       items: itemsUpdate
     }, (res) => {
       if (res && res.success) {
         state.generalItems = res.generalItems;
         state.limitedItems = res.limitedItems;
-        state.limitedItemsMaxClaims = limitedItemsMaxClaims;
-        updateLimitedQuickButtons();
         syncItemsData();
         renderLobbyLocations();
         if (window.sounds) window.sounds.playSuccess();
@@ -562,7 +535,6 @@
       views.ended.classList.remove('hidden');
       statusText.textContent = 'AFGELOPEN';
       statusBadge.className = 'px-3.5 py-1 rounded-full text-xs font-bold font-mono tracking-wider bg-rose-950 text-rose-300 border border-rose-600/40 flex items-center gap-1.5 shadow';
-      renderPodium(state.leaderboard);
     }
   }
 
@@ -790,44 +762,345 @@
     });
   }
 
+  // ==========================================
+  // 2D CHARACTER MODELLEN VOOR WINNAARS PODIUM
+  // ==========================================
+  function createPlayer2DModelSvg(place, avatar) {
+    const av = avatar || '🎒';
+
+    if (place === 3) {
+      // 3e Plaats: 2D Model van speler ingedoken in telefoon door doomscrollen
+      return `
+      <svg viewBox="0 0 160 160" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="screenBeam3" cx="50%" cy="80%" r="65%">
+            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.95"/>
+            <stop offset="45%" stop-color="#0284c7" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#0369a1" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="hoodieGrad3" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#475569"/>
+            <stop offset="100%" stop-color="#0f172a"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Donkere kamer achtergrond -->
+        <circle cx="80" cy="80" r="76" fill="#090d16" stroke="#b45309" stroke-width="2.5"/>
+
+        <!-- Zwevende storende notificaties -->
+        <g opacity="0.9">
+          <circle cx="28" cy="38" r="9" fill="#ef4444"/>
+          <text x="28" y="42" font-size="10" text-anchor="middle" fill="#fff" font-weight="900" font-family="sans-serif">!</text>
+
+          <circle cx="132" cy="44" r="10" fill="#ec4899"/>
+          <text x="132" y="48" font-size="10" text-anchor="middle" fill="#fff" font-family="sans-serif">❤</text>
+
+          <rect x="108" y="18" width="24" height="15" rx="5" fill="#f59e0b"/>
+          <text x="120" y="29" font-size="8" text-anchor="middle" fill="#000" font-weight="900" font-family="sans-serif">REELS</text>
+        </g>
+
+        <!-- Kromme ingedoken rug / lichaam -->
+        <path d="M 32 158 Q 40 96 74 94 Q 112 92 128 158 Z" fill="url(#hoodieGrad3)"/>
+
+        <!-- Speler avatar op hoodie -->
+        <circle cx="80" cy="116" r="13" fill="#0f172a" stroke="#64748b" stroke-width="1.5"/>
+        <text x="80" y="121" font-size="14" text-anchor="middle">${av}</text>
+
+        <!-- Voorovergebogen hoofd in schermtrance -->
+        <g>
+          <circle cx="80" cy="58" r="23" fill="#1e293b"/>
+          <ellipse cx="80" cy="65" rx="19" ry="17" fill="#fed7aa"/>
+          <!-- Halve droopy oogjes gericht op het scherm -->
+          <ellipse cx="73" cy="68" rx="3.5" ry="2" fill="#0284c7"/>
+          <ellipse cx="87" cy="68" rx="3.5" ry="2" fill="#0284c7"/>
+          <circle cx="73" cy="68" r="1.2" fill="#38bdf8"/>
+          <circle cx="87" cy="68" r="1.2" fill="#38bdf8"/>
+          <!-- Gezichtsuitdrukking: verdoofd door scherm -->
+          <ellipse cx="80" cy="76" rx="2.5" ry="2" fill="#9a3412" opacity="0.6"/>
+        </g>
+
+        <!-- Telefoonscherm schijnsel (blauw beam omhoog op het gezicht) -->
+        <polygon points="62,118 98,118 106,64 54,64" fill="url(#screenBeam3)" opacity="0.85"/>
+
+        <!-- Armen gebogen naar voren met telefoon -->
+        <path d="M 45 118 Q 62 136 70 128" stroke="#334155" stroke-width="10" stroke-linecap="round" fill="none"/>
+        <path d="M 115 118 Q 98 136 90 128" stroke="#334155" stroke-width="10" stroke-linecap="round" fill="none"/>
+
+        <!-- De oplichtende smartphone -->
+        <rect x="66" y="108" width="28" height="42" rx="4" fill="#0284c7" stroke="#38bdf8" stroke-width="2" transform="rotate(-3 80 129)"/>
+        <rect x="69" y="112" width="22" height="34" rx="2" fill="#e0f2fe" transform="rotate(-3 80 129)"/>
+        <!-- Duimen op het scherm -->
+        <circle cx="68" cy="125" r="3.5" fill="#fed7aa"/>
+        <circle cx="92" cy="123" r="3.5" fill="#fed7aa"/>
+      </svg>`;
+    }
+
+    if (place === 2) {
+      // 2e Plaats: 2D Model van speler meer overeind, telefoon omlaag/uit, blik omhoog
+      return `
+      <svg viewBox="0 0 160 160" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="shirtGrad2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0284c7"/>
+            <stop offset="100%" stop-color="#0f172a"/>
+          </linearGradient>
+        </defs>
+
+        <!-- Frisse achtergrond cirkel -->
+        <circle cx="80" cy="80" r="76" fill="#131c2e" stroke="#94a3b8" stroke-width="2.5"/>
+
+        <!-- Frisse aura/sterretjes -->
+        <circle cx="34" cy="36" r="2" fill="#38bdf8" opacity="0.7"/>
+        <circle cx="126" cy="38" r="2.5" fill="#38bdf8" opacity="0.7"/>
+        <circle cx="28" cy="72" r="1.5" fill="#94a3b8" opacity="0.6"/>
+
+        <!-- Rechtop zittend lichaam / romp -->
+        <path d="M 36 158 Q 42 102 80 100 Q 118 102 124 158 Z" fill="url(#shirtGrad2)"/>
+
+        <!-- Kraagje -->
+        <polygon points="70,102 80,116 90,102" fill="#e2e8f0"/>
+
+        <!-- Speler avatar op borst -->
+        <circle cx="80" cy="128" r="13" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
+        <text x="80" y="133" font-size="14" text-anchor="middle">${av}</text>
+
+        <!-- Hoofd rechtop en omhoog gericht -->
+        <g>
+          <circle cx="80" cy="54" r="24" fill="#334155"/>
+          <ellipse cx="80" cy="58" rx="20" ry="20" fill="#fed7aa"/>
+          <!-- Heldere, wakkere ogen recht naar voren/omhoog -->
+          <circle cx="73" cy="56" r="3.5" fill="#1e293b"/>
+          <circle cx="87" cy="56" r="3.5" fill="#1e293b"/>
+          <circle cx="74.5" cy="54.5" r="1.2" fill="#ffffff"/>
+          <circle cx="88.5" cy="54.5" r="1.2" fill="#ffffff"/>
+          <!-- Lichte glimlach / ontspanning -->
+          <path d="M 74 68 Q 80 73 86 68" stroke="#9a3412" stroke-width="2" stroke-linecap="round" fill="none"/>
+        </g>
+
+        <!-- Rechterarm relaxed -->
+        <path d="M 44 110 Q 36 130 38 150" stroke="#0284c7" stroke-width="9" stroke-linecap="round" fill="none"/>
+
+        <!-- Linkerarm houdt de telefoon omlaag (scherm staat UIT!) -->
+        <path d="M 116 110 Q 124 130 118 144" stroke="#0284c7" stroke-width="9" stroke-linecap="round" fill="none"/>
+        <!-- Telefoon omlaag gericht, zwart scherm -->
+        <rect x="112" y="136" width="16" height="22" rx="3" fill="#1e293b" stroke="#475569" stroke-width="1.5" transform="rotate(15 120 147)"/>
+        <rect x="114" y="138" width="12" height="18" rx="1.5" fill="#0f172a" transform="rotate(15 120 147)"/>
+        <circle cx="118" cy="144" r="3.5" fill="#fed7aa"/>
+      </svg>`;
+    }
+
+    // 1e Plaats: 2D Model van speler afgestudeerd & schermvrij (Baret, Toga, Diploma omhoog!)
+    return `
+    <svg viewBox="0 0 160 160" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="goldAura" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f59e0b"/>
+          <stop offset="50%" stop-color="#fbbf24"/>
+          <stop offset="100%" stop-color="#d97706"/>
+        </linearGradient>
+        <linearGradient id="togaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1e1b4b"/>
+          <stop offset="100%" stop-color="#09090b"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Gouden glorieuze achtergrond cirkel -->
+      <circle cx="80" cy="80" r="76" fill="#171821" stroke="url(#goldAura)" stroke-width="3.5"/>
+
+      <!-- Gouden vonken / feestelijke sterren -->
+      <g fill="#fbbf24" opacity="0.9">
+        <polygon points="26,32 29,38 36,39 30,44 32,51 26,47 20,51 22,44 16,39 23,38"/>
+        <polygon points="134,32 137,38 144,39 138,44 140,51 134,47 128,51 130,44 124,39 131,38"/>
+        <circle cx="48" cy="22" r="2" fill="#fff"/>
+        <circle cx="112" cy="20" r="2.5" fill="#fff"/>
+      </g>
+
+      <!-- Statige Toga (Academisch afstudeerkleed) -->
+      <path d="M 32 158 Q 40 96 80 94 Q 120 96 128 158 Z" fill="url(#togaGrad)"/>
+
+      <!-- Gouden sjerp / revers van geslaagde -->
+      <path d="M 68 96 L 76 158 L 84 158 L 92 96 Z" fill="url(#goldAura)"/>
+
+      <!-- Gouden Ere-medaille met speler avatar -->
+      <circle cx="80" cy="120" r="14" fill="#fbbf24" stroke="#d97706" stroke-width="2"/>
+      <text x="80" y="125.5" font-size="15" text-anchor="middle">${av}</text>
+
+      <!-- Vrolijk, trots hoofd -->
+      <g>
+        <circle cx="80" cy="56" r="22" fill="#fed7aa"/>
+        <path d="M 70 54 Q 74 49 78 54" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M 82 54 Q 86 49 90 54" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M 72 65 Q 80 73 88 65" stroke="#b45309" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <circle cx="68" cy="62" r="3" fill="#f43f5e" opacity="0.4"/>
+        <circle cx="92" cy="62" r="3" fill="#f43f5e" opacity="0.4"/>
+      </g>
+
+      <!-- Academische Baret (Graduation Cap / Mortarboard) -->
+      <g transform="translate(0, -2)">
+        <ellipse cx="80" cy="38" rx="16" ry="6" fill="#09090b"/>
+        <polygon points="80,18 122,30 80,42 38,30" fill="#0f172a" stroke="#fbbf24" stroke-width="1.5"/>
+        <circle cx="80" cy="30" r="2.5" fill="#fbbf24"/>
+        <path d="M 80 30 Q 106 33 108 48" stroke="#fbbf24" stroke-width="2" fill="none"/>
+        <rect x="105" y="48" width="6" height="8" rx="1" fill="#f59e0b"/>
+      </g>
+
+      <!-- Rechterhand steekt trots het DIPLOMA omhoog! -->
+      <g transform="translate(-16, -6)">
+        <path d="M 52 104 Q 40 85 42 70" stroke="#1e1b4b" stroke-width="9" stroke-linecap="round" fill="none"/>
+        <circle cx="42" cy="68" r="4" fill="#fed7aa"/>
+        <rect x="28" y="52" width="28" height="11" rx="2" fill="#fffbeb" stroke="#d97706" stroke-width="1.5" transform="rotate(-25 42 57)"/>
+        <rect x="40" y="50" width="4" height="15" fill="#dc2626" transform="rotate(-25 42 57)"/>
+      </g>
+
+      <!-- Linkerhand zwaait vrolijk -->
+      <path d="M 112 104 Q 124 88 122 75" stroke="#1e1b4b" stroke-width="9" stroke-linecap="round" fill="none"/>
+      <circle cx="122" cy="73" r="4" fill="#fed7aa"/>
+    </svg>`;
+  }
+
+  let podiumTimeouts = [];
+
+  function clearPodiumTimeouts() {
+    if (podiumTimeouts && podiumTimeouts.length > 0) {
+      podiumTimeouts.forEach(t => clearTimeout(t));
+      podiumTimeouts = [];
+    }
+  }
+
   function renderPodium(leaderboard, reason) {
     const podiumGrid = document.getElementById('podium-top3-grid');
     const reasonLabel = document.getElementById('ended-reason-label');
     if (reasonLabel && reason) reasonLabel.textContent = reason;
     if (!podiumGrid) return;
 
+    clearPodiumTimeouts();
     podiumGrid.innerHTML = '';
 
-    const top1 = leaderboard[0];
-    const top2 = leaderboard[1];
-    const top3 = leaderboard[2];
+    const list = Array.isArray(leaderboard) ? leaderboard : [];
+    const top1 = list[0] || null;
+    const top2 = list[1] || null;
+    const top3 = list[2] || null;
 
-    const createPodiumCol = (player, place, heightClass, colorClass, medal) => {
+    // Configuratie per podiumplek met 2D character modellen van de spelers
+    const config3 = {
+      place: '3e Plaats',
+      rank: 3,
+      medal: '🥉',
+      pillarHeight: 'h-24 md:h-28',
+      pillarColor: 'bg-gradient-to-t from-amber-950 via-amber-900 to-amber-700 text-amber-200 border-amber-600/50',
+      player: top3,
+      badgeText: '📱 Verzonken in doomscrollen',
+      badgeClass: 'bg-rose-950/90 text-rose-300 border-rose-800/80',
+      descText: 'Tijd verloren aan schermen & video feeds'
+    };
+
+    const config2 = {
+      place: '2e Plaats',
+      rank: 2,
+      medal: '🥈',
+      pillarHeight: 'h-32 md:h-36',
+      pillarColor: 'bg-gradient-to-t from-stone-600 via-stone-400 to-stone-200 text-stone-900 border-stone-100',
+      player: top2,
+      badgeText: '👀 Minder op scherm, blik omhoog',
+      badgeClass: 'bg-amber-950/90 text-amber-300 border-amber-700/80',
+      descText: 'Weerstand geboden aan de meeste afleidingen'
+    };
+
+    const config1 = {
+      place: '1e Plaats',
+      rank: 1,
+      medal: '🥇',
+      pillarHeight: 'h-44 md:h-52',
+      pillarColor: 'bg-gradient-to-t from-amber-600 via-amber-400 to-yellow-300 text-stone-950 border-amber-200 shadow-amber-500/20 shadow-xl',
+      player: top1,
+      badgeText: '🎓 Schermvrij & Glansrijk Geslaagd!',
+      badgeClass: 'bg-emerald-950/90 text-emerald-300 border-emerald-500/80 ring-1 ring-emerald-400/40',
+      descText: 'Volledig gefocust op de echte toekomst!'
+    };
+
+    // Creëer de 3 kolommen in visuele opstelling: [2e Plaats (links), 1e Plaats (midden), 3e Plaats (rechts)]
+    const buildColumn = (cfg) => {
       const col = document.createElement('div');
-      col.className = 'flex flex-col items-center justify-end';
-      if (!player) {
+      col.className = 'flex flex-col items-center justify-end transition-all duration-700 ease-out opacity-0 transform translate-y-10 scale-95';
+
+      if (!cfg.player) {
         col.innerHTML = `
-          <div class="text-stone-600 text-xs mb-2">-</div>
-          <div class="w-full ${heightClass} bg-stone-900 rounded-t-2xl border border-stone-800 flex items-center justify-center text-stone-600 font-bold">${medal}</div>
+          <div class="w-full text-center mb-3">
+            <span class="text-stone-600 text-xs font-mono">- Geen speler -</span>
+          </div>
+          <div class="w-full ${cfg.pillarHeight} bg-stone-900/90 rounded-t-3xl border border-stone-800 flex items-center justify-center text-stone-600 font-bold text-xl">${cfg.medal}</div>
         `;
         return col;
       }
 
+      const modelSvg = createPlayer2DModelSvg(cfg.rank, cfg.player.avatar);
+
       col.innerHTML = `
-        <span class="text-3xl mb-1">${player.avatar}</span>
-        <span class="text-xs font-bold text-white truncate max-w-[120px]">${player.name}</span>
-        <span class="text-xs font-mono font-bold text-emerald-400 mb-2">${player.score} pt</span>
-        <div class="w-full ${heightClass} ${colorClass} rounded-t-2xl flex flex-col items-center justify-center shadow-lg border-t-2 border-white/20">
-          <span class="text-2xl font-black text-black">${medal}</span>
-          <span class="text-[10px] font-bold text-black uppercase">${place}</span>
+        <div class="flex flex-col items-center text-center mb-2.5 w-full">
+          <!-- 2D Model van de speler in zijn specifieke scherm-status -->
+          <div class="w-20 h-20 sm:w-28 sm:h-28 rounded-3xl overflow-hidden shadow-2xl relative mb-2 flex items-center justify-center transition-transform duration-500 hover:scale-105">
+            ${modelSvg}
+          </div>
+
+          <!-- Speler Gegevens -->
+          <span class="text-xs sm:text-sm font-black text-white truncate max-w-[110px] sm:max-w-[150px] mt-1">${cfg.player.name}</span>
+          <span class="text-[11px] sm:text-xs font-mono font-bold text-emerald-400">${cfg.player.score} pt</span>
+
+          <!-- Thematische Status Badge -->
+          <div class="mt-1 px-2 py-0.5 rounded-lg border text-[9px] sm:text-[10px] font-bold leading-tight max-w-[120px] sm:max-w-[160px] ${cfg.badgeClass}">
+            ${cfg.badgeText}
+          </div>
+          <p class="text-[9px] text-stone-400 mt-0.5 hidden sm:block max-w-[140px] leading-tight">${cfg.descText}</p>
+        </div>
+
+        <!-- Podium Pilaar -->
+        <div class="w-full ${cfg.pillarHeight} ${cfg.pillarColor} rounded-t-3xl flex flex-col items-center justify-center shadow-2xl border-t-2">
+          <span class="text-2xl sm:text-3xl font-black drop-shadow">${cfg.medal}</span>
+          <span class="text-[10px] sm:text-xs font-black uppercase tracking-wider">${cfg.place}</span>
         </div>
       `;
       return col;
     };
 
-    podiumGrid.appendChild(createPodiumCol(top2, '2e Plaats', 'h-28', 'bg-stone-300', '🥈'));
-    podiumGrid.appendChild(createPodiumCol(top1, '1e Plaats', 'h-40', 'bg-amber-400', '🥇'));
-    podiumGrid.appendChild(createPodiumCol(top3, '3e Plaats', 'h-20', 'bg-amber-700', '🥉'));
+    const col2 = buildColumn(config2);
+    const col1 = buildColumn(config1);
+    const col3 = buildColumn(config3);
+
+    podiumGrid.appendChild(col2);
+    podiumGrid.appendChild(col1);
+    podiumGrid.appendChild(col3);
+
+    // Korte geanimeerde onthulling:
+    // 1. DERDE PLAATS eerst onthullen (na 600ms)
+    podiumTimeouts.push(setTimeout(() => {
+      col3.classList.remove('opacity-0', 'translate-y-10', 'scale-95');
+      col3.classList.add('opacity-100', 'translate-y-0', 'scale-100');
+      if (window.sounds) window.sounds.playClick();
+    }, 600));
+
+    // 2. TWEEDE PLAATS daarna onthullen (na 2200ms)
+    podiumTimeouts.push(setTimeout(() => {
+      col2.classList.remove('opacity-0', 'translate-y-10', 'scale-95');
+      col2.classList.add('opacity-100', 'translate-y-0', 'scale-100');
+      if (window.sounds) window.sounds.playClick();
+    }, 2200));
+
+    // 3. EERSTE PLAATS als klapstuk onthullen (na 3800ms)
+    podiumTimeouts.push(setTimeout(() => {
+      col1.classList.remove('opacity-0', 'translate-y-10', 'scale-95');
+      col1.classList.add('opacity-100', 'translate-y-0', 'scale-100');
+      if (window.sounds) {
+        if (typeof window.sounds.playReward === 'function') window.sounds.playReward();
+        else if (typeof window.sounds.playSuccess === 'function') window.sounds.playSuccess();
+      }
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+    }, 3800));
   }
 
   document.addEventListener('DOMContentLoaded', init);
