@@ -973,6 +973,13 @@
     if (reasonLabel && reason) reasonLabel.textContent = reason;
     if (!podiumGrid) return;
 
+    // Gedeeld podium (zelfde als op de telefoons)
+    if (window.SharedPodium) {
+      clearPodiumTimeouts();
+      window.SharedPodium.render(podiumGrid, leaderboard, { compact: false });
+      return;
+    }
+
     clearPodiumTimeouts();
     podiumGrid.innerHTML = '';
 

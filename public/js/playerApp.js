@@ -143,7 +143,7 @@
       state.cardOrder = getPlayerCardOrder(state.playerId);
 
       updatePlayerBar();
-      updateScreenVisibility(data.gameState.status);
+      updateScreenVisibility(data.gameState.status, data.leaderboard || data.gameState.leaderboard);
     });
 
     socket.on('state:sync', (data) => {
@@ -170,7 +170,7 @@
         updatePlayerBar();
       }
 
-      updateScreenVisibility(data.status);
+      updateScreenVisibility(data.status, data.leaderboard);
 
       if (data.status === 'LOBBY') {
         updateLobbyPlayerList(data.leaderboard || []);
@@ -344,7 +344,7 @@
     }
   }
 
-  function updateScreenVisibility(status) {
+  function updateScreenVisibility(status, leaderboard) {
     if (state.inDoomscroll) {
       showScreen('doomscrollTrap');
       return;
@@ -363,8 +363,15 @@
       if (window.notifications) window.notifications.startAmbientDistractions();
     } else if (status === 'ENDED') {
       if (window.notifications) window.notifications.stopAmbientDistractions();
-      renderMobilePodium(data.leaderboard);
-    showScreen('gameOver');
+      if (leaderboard) state.lastLeaderboard = leaderboard;
+      // Podium-animatie maar één keer starten (state:sync komt herhaaldelijk binnen)
+      if (!state.podiumShown) {
+        state.podiumShown = true;
+        renderMobilePodium(state.lastLeaderboard || []);
+      }
+      showScreen('gameOver');
+    } else {
+      state.podiumShown = false;
     }
   }
 
@@ -2528,10 +2535,6 @@
               <input type="text" maxlength="1" inputmode="numeric" class="code-digit w-12 h-14 rounded-2xl border-2 border-stone-300 bg-white text-center font-mono text-2xl font-bold text-stone-900 focus:border-primary focus:outline-none shadow-xs" data-idx="3">
             </div>
 
-            <!-- Snelle test-hulp knop -->
-            <button type="button" onclick="window.playerApp.fillTestCode('${item.code}')" class="text-[10px] text-stone-400 hover:text-stone-700 underline font-mono">
-              💡 Code testen (${item.code})
-            </button>
           </div>
 
           <!-- DE 3 KNOPPEN UIT DE DETAILS (Alle knoppen identiek qua stijl) -->
@@ -5517,9 +5520,43 @@
   function handleModalDismiss() {
     if (state.activeModal === 'COOLDOWN') {
       claimSelfControlReward();
+    } else if (document.getElementById('loc-captcha-container') || document.getElementById('hint-captcha-container')) {
+      // Tik naast een captcha: eerst vragen, anders gaat alle voortgang verloren
+      showCaptchaLeaveConfirm('captcha');
+    } else if (state.activeModal === 'ITEM_TASK' && state.itemTaskSequence) {
+      // Tik naast een taak: anders is de reeks opgeloste taken weg
+      showCaptchaLeaveConfirm('task');
     } else {
       closeModal();
     }
+  }
+
+  function showCaptchaLeaveConfirm(kind = 'captcha') {
+    const what = kind === 'task' ? 'Je voortgang bij de taken (je reeks opgeloste taken) wordt gereset' : "Je voortgang bij de captcha's wordt gereset";
+    if (document.getElementById('captcha-leave-confirm')) return;
+    const box = document.createElement('div');
+    box.id = 'captcha-leave-confirm';
+    box.className = 'fixed inset-0 z-[60] bg-stone-950/60 flex items-center justify-center p-6';
+    box.innerHTML = `
+      <div class="w-full max-w-[320px] bg-[#FFFDF9] rounded-3xl shadow-2xl border border-stone-200 p-5 text-center space-y-3">
+        <span class="material-symbols-outlined text-amber-600 text-4xl">warning</span>
+        <h3 class="font-display text-base font-black text-stone-900">Weet je zeker dat je wilt stoppen?</h3>
+        <p class="text-xs text-stone-600">${what} en je moet daarna opnieuw beginnen.</p>
+        <button type="button" data-act="stay" class="w-full py-3 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm active:scale-95 transition cursor-pointer">Nee, ga verder</button>
+        <button type="button" data-act="leave" class="w-full py-2.5 rounded-2xl bg-stone-100 hover:bg-stone-200 text-rose-700 font-semibold text-xs transition cursor-pointer">Ja, stoppen (voortgang reset)</button>
+      </div>`;
+    box.addEventListener('click', (e) => {
+      const act = e.target.closest('[data-act]')?.getAttribute('data-act');
+      if (e.target === box || act === 'stay') { box.remove(); return; }
+      if (act === 'leave') {
+        box.remove();
+        state.locationCaptchaSequence = null;
+        state.hintCaptchaSequence = null;
+        state.itemTaskSequence = null;
+        closeModal();
+      }
+    });
+    document.body.appendChild(box);
   }
 
   function openModal() {
@@ -5701,6 +5738,13 @@
     const grid = document.getElementById('mobile-podium-grid');
     if (!grid) return;
 
+    // Gedeeld podium: exact hetzelfde als het digibord, alleen compacter
+    if (window.SharedPodium) {
+      clearMobilePodiumTimeouts();
+      window.SharedPodium.render(grid, leaderboard, { compact: true });
+      return;
+    }
+
     clearMobilePodiumTimeouts();
     grid.innerHTML = '';
 
@@ -5816,6 +5860,9 @@
     document.getElementById('final-self-control').textContent = `${state.stats.selfControlRewards || 0}x`;
     document.getElementById('final-doomscroll-time').textContent = `${state.stats.doomscrollSeconds || 0}s`;
 
+    if (Array.isArray(data.leaderboard)) state.lastLeaderboard = data.leaderboard;
+    state.podiumShown = true;
+    renderMobilePodium(state.lastLeaderboard || []);
     showScreen('gameOver');
   }
 

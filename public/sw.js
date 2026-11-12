@@ -1,5 +1,5 @@
 // Service Worker voor Doomscroll Escape PWA (v27 - Visuele Captchas, 32 Themataken, Geen Foutmeldingen)
-const CACHE_NAME = 'doomscroll-escape-v30';
+const CACHE_NAME = 'doomscroll-escape-v33';
 
 // Essentiële core bestanden voor offline werking en data-besparing
 const CORE_ASSETS = [
@@ -9,7 +9,8 @@ const CORE_ASSETS = [
   '/manifest.json',
   '/css/app.css',
   '/js/itemsData.js?v=29',
-  '/js/playerApp.js?v=30',
+  '/js/podium.js?v=33',
+  '/js/playerApp.js?v=33',
   '/js/soundEffects.js?v=29',
   '/js/notifications.js?v=29',
   '/assets/sounds/whatsapp.wav',
