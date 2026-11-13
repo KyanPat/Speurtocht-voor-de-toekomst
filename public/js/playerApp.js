@@ -26,6 +26,7 @@
     score: 0,
     claimedItems: [],
     cooldowns: {}, // itemId -> remainingSeconds
+    cooldownRewarded: {}, // itemId -> boolean (max 1x -15s korting per cooldown)
     revealedLocations: JSON.parse(localStorage.getItem('doomscroll_revealed_locs') || '{}'),
     revealedHints: JSON.parse(localStorage.getItem('doomscroll_revealed_hints') || '{}'),
     locationCaptchaSequence: null,
@@ -39,6 +40,10 @@
     activeModal: null,
     gameStatus: 'LOBBY',
     timeRemaining: 900,
+    jobRaiseUnlockSecondsLeft: 60,
+    trouwenUnlockSecondsLeft: 60,
+    jobRaiseUnlockTimerActive: false,
+    trouwenUnlockTimerActive: false,
     limitedItems: {},
     generalItems: {},
     trapStartTime: null,
@@ -139,16 +144,26 @@
       state.score = data.player.score || 0;
       state.claimedItems = data.player.claimedItems || [];
       state.cooldowns = data.player.cooldowns || {};
+      Object.keys(state.cooldowns).forEach((id) => {
+        if (state.cooldowns[id] > 0) {
+          startLocalCooldownTimer(id);
+        }
+      });
       state.stats = data.player.stats || state.stats;
       state.cardOrder = getPlayerCardOrder(state.playerId);
 
       updatePlayerBar();
       updateScreenVisibility(data.gameState.status, data.leaderboard || data.gameState.leaderboard);
+      ensureHistoryGuard();
     });
 
     socket.on('state:sync', (data) => {
       state.gameStatus = data.status;
       state.timeRemaining = data.timeRemaining;
+      if (data.jobRaiseUnlockSecondsLeft !== undefined) state.jobRaiseUnlockSecondsLeft = data.jobRaiseUnlockSecondsLeft;
+      if (data.trouwenUnlockSecondsLeft !== undefined) state.trouwenUnlockSecondsLeft = data.trouwenUnlockSecondsLeft;
+      if (data.jobRaiseUnlockTimerActive !== undefined) state.jobRaiseUnlockTimerActive = data.jobRaiseUnlockTimerActive;
+      if (data.trouwenUnlockTimerActive !== undefined) state.trouwenUnlockTimerActive = data.trouwenUnlockTimerActive;
       state.limitedItems = data.limitedItems;
       state.generalItems = data.generalItems;
       state.limitedItemsMaxClaims = data.limitedItemsMaxClaims || data.gameState?.limitedItemsMaxClaims || 1;
@@ -181,7 +196,21 @@
 
     socket.on('timer:tick', (data) => {
       state.timeRemaining = data.timeRemaining;
+      if (data.jobRaiseUnlockSecondsLeft !== undefined) state.jobRaiseUnlockSecondsLeft = data.jobRaiseUnlockSecondsLeft;
+      if (data.trouwenUnlockSecondsLeft !== undefined) state.trouwenUnlockSecondsLeft = data.trouwenUnlockSecondsLeft;
+      if (data.jobRaiseUnlockTimerActive !== undefined) state.jobRaiseUnlockTimerActive = data.jobRaiseUnlockTimerActive;
+      if (data.trouwenUnlockTimerActive !== undefined) state.trouwenUnlockTimerActive = data.trouwenUnlockTimerActive;
       updateHeaderTimer(data.formattedTime);
+
+      const jrEl = document.getElementById('unlock-timer-job_raise');
+      if (jrEl) jrEl.textContent = formatCooldownTime(state.jobRaiseUnlockSecondsLeft);
+      const jrBadge = document.getElementById('unlock-badge-job_raise');
+      if (jrBadge) jrBadge.textContent = formatCooldownTime(state.jobRaiseUnlockSecondsLeft);
+
+      const trEl = document.getElementById('unlock-timer-trouwen');
+      if (trEl) trEl.textContent = formatCooldownTime(state.trouwenUnlockSecondsLeft);
+      const trBadge = document.getElementById('unlock-badge-trouwen');
+      if (trBadge) trBadge.textContent = formatCooldownTime(state.trouwenUnlockSecondsLeft);
     });
 
     socket.on('game:started', (data) => {
@@ -694,7 +723,13 @@
       } else if (item.id === 'trouwen' && dateEligible.length > 0 && !dateEligible.includes(state.playerId)) {
         badgeHtml = `<span class="absolute -top-2 -right-2 bg-stone-700 text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded shadow">🔒 Alleen voor ${dateWinnerNames}</span>`;
       } else if (isLocked) {
-        badgeHtml = `<span class="absolute -top-2 -right-2 bg-stone-700 text-white text-[9px] font-bold uppercase px-2 py-0.5 rounded shadow">🔒 Vergrendeld</span>`;
+        const isUnlockCountingDown = (item.id === 'job_raise' && intEligible.length > 0) || (item.id === 'trouwen' && dateEligible.length > 0);
+        if (isUnlockCountingDown) {
+          const secsLeft = item.id === 'trouwen' ? state.trouwenUnlockSecondsLeft : state.jobRaiseUnlockSecondsLeft;
+          badgeHtml = `<span class="absolute -top-2 -right-2 bg-amber-600 text-white text-[9px] font-bold uppercase px-2 py-0.5 rounded shadow">⏳ <span id="unlock-badge-${item.id}">${formatCooldownTime(secsLeft)}</span></span>`;
+        } else {
+          badgeHtml = `<span class="absolute -top-2 -right-2 bg-stone-700 text-white text-[9px] font-bold uppercase px-2 py-0.5 rounded shadow">🔒 Vergrendeld</span>`;
+        }
       } else if (item.isLimited) {
         const remainingClaims = Math.max(0, maxClaims - claimsList.length);
         if (claimsList.length > 0 && remainingClaims > 0) {
@@ -734,15 +769,30 @@
           </div>
         `;
       } else if (isLocked) {
-        const lockNote = item.id === 'trouwen' ? 'Ontgrendelt 1 minuut na Date' : 'Ontgrendelt 1 minuut na interview';
-        innerContentHtml = `
-          <div class="w-full min-h-[76px] bg-stone-100 rounded-sm mb-2 p-2 flex flex-col items-center justify-center border border-stone-300 text-center">
-            <div class="flex items-center gap-1 text-xs font-bold text-stone-700 mb-0.5">
-              <span>🔒</span> ${item.name}
+        const isUnlockCountingDown = (item.id === 'job_raise' && intEligible.length > 0) || (item.id === 'trouwen' && dateEligible.length > 0);
+        if (isUnlockCountingDown) {
+          const secsLeft = item.id === 'trouwen' ? state.trouwenUnlockSecondsLeft : state.jobRaiseUnlockSecondsLeft;
+          innerContentHtml = `
+            <div class="w-full min-h-[76px] bg-amber-50 rounded-sm mb-2 p-2 flex flex-col items-center justify-center border border-amber-300 text-center">
+              <div class="flex items-center gap-1 text-xs font-bold text-stone-800 mb-0.5">
+                <span>⏳</span> ${item.name}
+              </div>
+              <div class="bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded text-[9px] text-amber-950 font-bold leading-tight">
+                Ontgrendelt over: <span class="font-mono" id="unlock-timer-${item.id}">${formatCooldownTime(secsLeft)}</span>
+              </div>
             </div>
-            <p class="text-[8px] text-stone-500 leading-tight">${lockNote}</p>
-          </div>
-        `;
+          `;
+        } else {
+          const lockNote = item.id === 'trouwen' ? 'Ontgrendelt 1 minuut na Date' : 'Ontgrendelt 1 minuut na interview';
+          innerContentHtml = `
+            <div class="w-full min-h-[76px] bg-stone-100 rounded-sm mb-2 p-2 flex flex-col items-center justify-center border border-stone-300 text-center">
+              <div class="flex items-center gap-1 text-xs font-bold text-stone-700 mb-0.5">
+                <span>🔒</span> ${item.name}
+              </div>
+              <p class="text-[8px] text-stone-500 leading-tight">${lockNote}</p>
+            </div>
+          `;
+        }
       } else {
         const stockLabel = maxClaims > 1 ? `${maxClaims} Beschikbaar!` : '1 Beschikbaar!';
         innerContentHtml = `
@@ -766,7 +816,8 @@
       } else if (item.id === 'trouwen' && dateEligible.length > 0 && !dateEligible.includes(state.playerId)) {
         clickActionText = `Alleen voor ${dateWinnerNames}`;
       } else if (isLocked) {
-        clickActionText = 'Timer start na vorig item';
+        const isUnlockCountingDown = (item.id === 'job_raise' && intEligible.length > 0) || (item.id === 'trouwen' && dateEligible.length > 0);
+        clickActionText = isUnlockCountingDown ? 'Even geduld, timer loopt...' : 'Timer start na vorig item';
       } else if (activeCooldown > 0) {
         clickActionText = 'Tik voor wachttijd';
       } else if (item.isLimited && !isLocRevealed) {
@@ -884,6 +935,7 @@
 
         if (state.cooldowns[itemId] <= 0) {
           delete state.cooldowns[itemId];
+          if (state.cooldownRewarded) delete state.cooldownRewarded[itemId];
           clearInterval(cooldownIntervals[itemId]);
           delete cooldownIntervals[itemId];
           socket.emit('player:update_cooldown', { itemId, remainingSeconds: 0 });
@@ -3008,7 +3060,8 @@
       } else {
         if (window.sounds) window.sounds.playError();
         closeModal();
-        state.cooldowns[item.id] = 45;
+        state.cooldowns[item.id] = (res && res.cooldownSeconds) ? res.cooldownSeconds : 45;
+        state.cooldownRewarded[item.id] = false;
         startLocalCooldownTimer(item.id);
         renderMapCards();
         openCooldownModal(item);
@@ -3084,12 +3137,18 @@
     const itemId = state.activeItemId;
     closeModal();
     if (!itemId) return;
+    if (state.cooldownRewarded && state.cooldownRewarded[itemId]) return;
 
     socket.emit('cooldown:reward_self_control', { itemId }, (res) => {
       if (res && res.success) {
+        state.cooldownRewarded[itemId] = true;
         state.cooldowns[itemId] = res.newCooldown;
         if (window.sounds) window.sounds.playReward();
-        showToast('Goed bezig! Je blijft gefocust op je doelen.', 'success');
+        showToast('Goed bezig! Je blijft gefocust op je doelen (-15s straftijd).', 'success');
+        renderMapCards();
+      } else if (res && res.alreadyClaimed) {
+        state.cooldownRewarded[itemId] = true;
+        state.cooldowns[itemId] = res.newCooldown;
         renderMapCards();
       }
     });
@@ -3215,7 +3274,7 @@
       url: '/assets/videos/friday_chill.mp4',
       caption: 'De golven tijdens een gouden zonsondergang op vrijdagavond... 🌅🌊 Zet je geluid even lekker aan! #sunset #ocean #relax #chill',
       user: 'sunset_vibes_nl',
-      avatar: 'https://i.pravatar.cc/150?img=11',
+      avatar: '/assets/images/avatar_1.jpg',
       loc: 'Scheveningen Strand',
       likes: 42100,
       sound: 'Origineel Geluid - Friday Sunset Chill (Akkoorden & Golven)',
@@ -3225,7 +3284,7 @@
       url: '/assets/videos/bear_stream.mp4',
       caption: 'Wat een natuurgeweld! Gigantische beer vangt verse vis in de woeste stroomversnelling 🐻🐟 #wildlife #nature #river #salmon',
       user: 'nature_wildlife_nl',
-      avatar: 'https://i.pravatar.cc/150?img=33',
+      avatar: '/assets/images/avatar_2.jpg',
       loc: 'Nationaal Park',
       likes: 58400,
       sound: 'Origineel Geluid - Ruisende Bergrivier & Beer Plons',
@@ -3235,7 +3294,7 @@
       url: '/assets/videos/echo_music.mp4',
       caption: 'Onze nieuwe single "Here We Are" is uit! 🎸🔥 Wat vinden jullie van het refrein? #newmusic #indierock #vibes #live',
       user: 'echo_band_official',
-      avatar: 'https://i.pravatar.cc/150?img=47',
+      avatar: '/assets/images/avatar_3.jpg',
       loc: 'TivoliVredenburg, Utrecht',
       likes: 71200,
       sound: 'Origineel Geluid - Echo: Here We Are (Vocal & Drums)',
@@ -3245,7 +3304,7 @@
       url: '/assets/videos/sintel_trailer.mp4',
       caption: 'Sintel: epische zoektocht van een dappere krijger door de besneeuwde bergen ⚔️🐉 Prachtige cinematische animatie! #sintel #openmovie #cgi',
       user: 'open_cinema_hub',
-      avatar: 'https://i.pravatar.cc/150?img=53',
+      avatar: '/assets/images/avatar_4.jpg',
       loc: 'Open Media Hub',
       likes: 89400,
       sound: 'Origineel Geluid - Jan Morgenstern (Sintel Score & Dragon Roar)',
@@ -3255,7 +3314,7 @@
       url: '/assets/videos/bunny_cartoon.mp4',
       caption: 'De legendarische Big Buck Bunny ontwaakt in het bos! 🐰🌳 100% gemaakt met open source 3D software! #blender3d #animation #openmovie',
       user: 'blender_open_anim',
-      avatar: 'https://i.pravatar.cc/150?img=20',
+      avatar: '/assets/images/bereal_selfie.jpg',
       loc: 'Amsterdam 3D Studio',
       likes: 94300,
       sound: 'Origineel Geluid - Fluitende Vogels & Vrolijke Bunny Score',
@@ -3265,7 +3324,7 @@
       url: '/assets/videos/movie_300.mp4',
       caption: 'Kijk naar die camerahoek en cinematische slow motion! 🎥💥 Prachtig staaltje actiewerk. #action #visuals #epic #slowmo',
       user: 'action_visuals_nl',
-      avatar: 'https://i.pravatar.cc/150?img=22',
+      avatar: '/assets/images/avatar_2.jpg',
       loc: 'Filmstudio Amsterdam',
       likes: 63100,
       sound: 'Origineel Geluid - Hollywood Action Drums & Effects',
@@ -3275,7 +3334,7 @@
       url: '/assets/videos/oceans.mp4',
       caption: 'Duik mee in de diepblauwe oceaan tussen de dolfijnen en koraalriffen 🐬🌊 Onwerkelijk rustgevend! #oceanlife #marinelife #deepblue',
       user: 'deep_ocean_explorer',
-      avatar: 'https://i.pravatar.cc/150?img=65',
+      avatar: '/assets/images/avatar_4.jpg',
       loc: 'Caribisch Nederland',
       likes: 112000,
       sound: 'Origineel Geluid - Ocean Symphony & Onderwater Ambience',
@@ -3284,11 +3343,11 @@
   ];
 
   const FAKE_DUTCH_COMMENTS = [
-    { id: 'c1', user: 'lisa.kramer', avatar: 'https://i.pravatar.cc/150?img=1', text: 'Hahaha dit meen je niet 😂💀', time: '3u', likes: 24, liked: false },
-    { id: 'c2', user: 'daan_vd', avatar: 'https://i.pravatar.cc/150?img=12', text: 'Waar is dit opgenomen?? Moeten we echt eens heen met z’n allen!', time: '5u', likes: 14, liked: false },
-    { id: 'c3', user: 'sophie.99', avatar: 'https://i.pravatar.cc/150?img=5', text: 'Wauw, echt geweldige kwaliteit beelden 😍✨', time: '1d', likes: 38, liked: false },
-    { id: 'c4', user: 'bram.student', avatar: 'https://i.pravatar.cc/150?img=8', text: 'Wie gaat er mee lunchen zo meteen? 👀🍕', time: '42m', likes: 9, liked: false },
-    { id: 'c5', user: 'lars.visser', avatar: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%20width%3D%22100%22%20height%3D%22100%22%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2248%22%20fill%3D%22%232563eb%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%223%22%2F%3E%3Ctext%20x%3D%2250%22%20y%3D%2256%22%20font-family%3D%22sans-serif%22%20font-weight%3D%22900%22%20font-size%3D%2242%22%20fill%3D%22%23ffffff%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3EL%3C%2Ftext%3E%3C%2Fsvg%3E', text: 'Volgende week gaan we hier ook heen gasten 🔥', time: '2u', likes: 17, liked: false }
+    { id: 'c1', user: 'lisa.kramer', avatar: '/assets/images/avatar_1.jpg', text: 'Hahaha dit meen je niet 😂💀', time: '3u', likes: 24, liked: false },
+    { id: 'c2', user: 'daan_vd', avatar: '/assets/images/avatar_2.jpg', text: 'Waar is dit opgenomen?? Moeten we echt eens heen met z’n allen!', time: '5u', likes: 14, liked: false },
+    { id: 'c3', user: 'sophie.99', avatar: '/assets/images/avatar_3.jpg', text: 'Wauw, echt geweldige kwaliteit beelden 😍✨', time: '1d', likes: 38, liked: false },
+    { id: 'c4', user: 'bram.student', avatar: '/assets/images/avatar_4.jpg', text: 'Wie gaat er mee lunchen zo meteen? 👀🍕', time: '42m', likes: 9, liked: false },
+    { id: 'c5', user: 'lars.visser', avatar: '/assets/images/bereal_selfie.jpg', text: 'Volgende week gaan we hier ook heen gasten 🔥', time: '2u', likes: 17, liked: false }
   ];
 
   let activeCommentsList = [...FAKE_DUTCH_COMMENTS];
@@ -3309,9 +3368,19 @@
     { title: 'Roadtrip langs de kust', icon: '🏎️', color1: '#14532d', color2: '#22c55e', desc: 'Vrijheid op de open snelweg' }
   ];
 
+  function escapeSvgText(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   function getSvgPostDataUri(seed = 1, width = 600, height = 600) {
     const idx = Math.abs(seed) % OFFLINE_POST_THEMES.length;
     const t = OFFLINE_POST_THEMES[idx];
+    const safeTitle = escapeSvgText(t.title);
+    const safeDesc = escapeSvgText(t.desc);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
       <defs>
         <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
@@ -3322,13 +3391,14 @@
       <rect width="100%" height="100%" fill="url(#bgGrad)"/>
       <circle cx="${width / 2}" cy="${height / 2 - 30}" r="${Math.min(width, height) * 0.25}" fill="#ffffff" opacity="0.15"/>
       <text x="${width / 2}" y="${height / 2}" font-size="${Math.min(width, height) * 0.3}" text-anchor="middle" dominant-baseline="middle">${t.icon}</text>
-      <text x="${width / 2}" y="${height / 2 + 100}" font-family="sans-serif" font-weight="900" font-size="24" fill="#ffffff" text-anchor="middle" letter-spacing="1">${t.title}</text>
-      <text x="${width / 2}" y="${height / 2 + 135}" font-family="sans-serif" font-weight="500" font-size="14" fill="#f8fafc" opacity="0.85" text-anchor="middle">${t.desc}</text>
+      <text x="${width / 2}" y="${height / 2 + 100}" font-family="sans-serif" font-weight="900" font-size="24" fill="#ffffff" text-anchor="middle" letter-spacing="1">${safeTitle}</text>
+      <text x="${width / 2}" y="${height / 2 + 135}" font-family="sans-serif" font-weight="500" font-size="14" fill="#f8fafc" opacity="0.85" text-anchor="middle">${safeDesc}</text>
     </svg>`;
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
   function getSvgAvatarDataUri(initial = '👤', bgHex = '#059669') {
+    const safeInitial = escapeSvgText(initial);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
       <defs>
         <linearGradient id="avGrad" x1="0" y1="0" x2="1" y2="1">
@@ -3337,22 +3407,37 @@
         </linearGradient>
       </defs>
       <circle cx="50" cy="50" r="48" fill="url(#avGrad)" stroke="#ffffff" stroke-width="3"/>
-      <text x="50" y="56" font-family="sans-serif" font-weight="900" font-size="42" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initial}</text>
+      <text x="50" y="56" font-family="sans-serif" font-weight="900" font-size="42" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${safeInitial}</text>
     </svg>`;
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
+  const LOCAL_STOCK_PHOTOS = [
+    '/assets/images/feed_city.jpg',
+    '/assets/images/feed_beach.jpg',
+    '/assets/images/feed_food.jpg',
+    '/assets/images/feed_mountain.jpg',
+    '/assets/images/bereal_main.jpg'
+  ];
+
+  const LOCAL_AVATAR_PHOTOS = [
+    '/assets/images/avatar_1.jpg',
+    '/assets/images/avatar_2.jpg',
+    '/assets/images/avatar_3.jpg',
+    '/assets/images/avatar_4.jpg',
+    '/assets/images/bereal_selfie.jpg'
+  ];
+
+  let avatarSeedCounter = 0;
+
   function getRandomPicsumUrl(w = 600, h = 600) {
     igPostSeedCounter++;
-    return getSvgPostDataUri(igPostSeedCounter, w, h);
+    return LOCAL_STOCK_PHOTOS[igPostSeedCounter % LOCAL_STOCK_PHOTOS.length];
   }
 
   function getRandomAvatarUrl() {
-    const initials = ['M', 'S', 'L', 'D', 'E', 'K', 'T', 'B', 'P', 'R'];
-    const colors = ['#059669', '#2563eb', '#7c3aed', '#db2777', '#d97706', '#0284c7'];
-    const init = initials[Math.floor(Math.random() * initials.length)];
-    const col = colors[Math.floor(Math.random() * colors.length)];
-    return getSvgAvatarDataUri(init, col);
+    avatarSeedCounter++;
+    return LOCAL_AVATAR_PHOTOS[avatarSeedCounter % LOCAL_AVATAR_PHOTOS.length];
   }
 
   // ==========================================
@@ -3733,8 +3818,8 @@
       const initialLikes = isVideo ? videoData.likes : Math.floor(Math.random() * 4500) + 120;
       const initialDislikes = Math.floor(Math.random() * 40) + 5;
       const commentsCount = Math.floor(Math.random() * 85) + 12;
-      const credits = isVideo ? videoData.credits : `Bron: Picsum Photos (Seed #${igPostSeedCounter}) • Licentie: CC0 Public Domain`;
-      const photoUrl = `${getSvgPostDataUri(igPostSeedCounter, 600, 600)}`;
+      const credits = isVideo ? videoData.credits : 'Bron: Lokale stockbibliotheek • Licentie: CC0 Rechtenvrij';
+      const photoUrl = LOCAL_STOCK_PHOTOS[igPostSeedCounter % LOCAL_STOCK_PHOTOS.length];
       const avatarUrl = isVideo ? videoData.avatar : getRandomAvatarUrl();
 
       igUserLikes[postId] = { count: initialLikes, liked: false };
@@ -4193,7 +4278,7 @@
       const v = FEED_OPEN_VIDEOS[i % FEED_OPEN_VIDEOS.length];
       const isImageReel = (i % 3 === 2);
       const seed = `reel_${platform}_${i}_${(i * 3571 + 104729) % 999999}`;
-      const url = isImageReel ? `${getSvgPostDataUri(seed, 600, 900)}` : v.url;
+      const url = isImageReel ? getRandomPicsumUrl(600, 900) : v.url;
       const mediaType = isImageReel ? 'image' : 'video';
       const audioUrl = v.audioUrl || v.url;
 
@@ -4204,7 +4289,7 @@
         url,
         audioUrl,
         sound: v.sound || 'Origineel Geluid - Trending Beat 🎵',
-        credits: isImageReel ? 'Picsum Photos CC0' : (v.credits || 'Open Media Hub'),
+        credits: isImageReel ? 'Bron: Lokale stockbibliotheek • Licentie: CC0 Rechtenvrij' : (v.credits || 'Open Media Hub'),
         user: v.user || `creator_${i}`,
         avatar: v.avatar || getRandomAvatarUrl(),
         caption: v.caption || 'Kijk deze video! 😂 #fyp #viral',
@@ -4538,11 +4623,11 @@
     closeInstagramComments();
 
     const notifications = [
-      { user: 'lisa.kramer', action: 'heeft je foto geliket.', time: '2u', avatar: 'https://i.pravatar.cc/150?img=1' },
-      { user: 'daan_vd', action: 'heeft gereageerd: "Echt ziek!"', time: '4u', avatar: 'https://i.pravatar.cc/150?img=12' },
-      { user: 'sophie.99', action: 'is je gaan volgen.', time: '1d', avatar: 'https://i.pravatar.cc/150?img=5' },
-      { user: 'bram.student', action: 'heeft je getagd in een bericht.', time: '1d', avatar: 'https://i.pravatar.cc/150?img=8' },
-      { user: 'lars.visser', action: 'heeft je foto geliket.', time: '2d', avatar: 'data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%20width%3D%22100%22%20height%3D%22100%22%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2248%22%20fill%3D%22%232563eb%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%223%22%2F%3E%3Ctext%20x%3D%2250%22%20y%3D%2256%22%20font-family%3D%22sans-serif%22%20font-weight%3D%22900%22%20font-size%3D%2242%22%20fill%3D%22%23ffffff%22%20text-anchor%3D%22middle%22%20dominant-baseline%3D%22middle%22%3EL%3C%2Ftext%3E%3C%2Fsvg%3E' }
+      { user: 'lisa.kramer', action: 'heeft je foto geliket.', time: '2u', avatar: '/assets/images/avatar_1.jpg' },
+      { user: 'daan_vd', action: 'heeft gereageerd: "Echt ziek!"', time: '4u', avatar: '/assets/images/avatar_2.jpg' },
+      { user: 'sophie.99', action: 'is je gaan volgen.', time: '1d', avatar: '/assets/images/avatar_3.jpg' },
+      { user: 'bram.student', action: 'heeft je getagd in een bericht.', time: '1d', avatar: '/assets/images/avatar_4.jpg' },
+      { user: 'lars.visser', action: 'heeft je foto geliket.', time: '2d', avatar: '/assets/images/bereal_selfie.jpg' }
     ];
 
     container.innerHTML = `
@@ -4944,8 +5029,8 @@
 
   // 3. BEREAL APP INTERFACE
   function renderBeRealApp(container) {
-    const mainPhoto = getRandomPicsumUrl(600, 800);
-    const selfiePhoto = getRandomPicsumUrl(300, 400);
+    const mainPhoto = '/assets/images/bereal_main.jpg';
+    const selfiePhoto = '/assets/images/bereal_selfie.jpg';
 
     container.innerHTML = `
       <div class="w-full h-full flex flex-col bg-black text-white max-w-md mx-auto overflow-y-auto select-none">
@@ -4975,9 +5060,10 @@
               <img src="${selfiePhoto}" class="w-full h-full object-cover" alt="Selfie">
             </div>
 
-            <div class="absolute bottom-3 left-4 text-left">
+            <div class="absolute bottom-3 left-4 text-left bg-black/45 backdrop-blur-sm px-2.5 py-1.5 rounded-xl">
               <span class="text-xs font-bold text-white block">@lisa.kramer</span>
-              <span class="text-[10px] text-stone-300">Buiten in het park • 2m te laat 🌿</span>
+              <span class="text-[10px] text-stone-200 block">Buiten in het park • 2m te laat 🌿</span>
+              <span class="text-[9px] text-stone-400">Bron: Lokale stockbibliotheek • CC0 Rechtenvrij</span>
             </div>
           </div>
 
@@ -5111,7 +5197,7 @@
     {
       id: 'thomas',
       name: 'Thomas 🎮',
-      avatar: 'https://i.pravatar.cc/150?img=12',
+      avatar: '/assets/images/avatar_4.jpg',
       avatarBg: 'bg-purple-800',
       isEmoji: false,
       status: 'online',
@@ -5928,6 +6014,43 @@
       showToast('🔗 Deellink gekopieerd naar klembord!');
     }
   };
+
+  // ==========================================
+  // TELEFOON TERUG-KNOP BESCHERMING (HARDWARE BACK BUTTON)
+  // Voorkomt dat het spel onbedoeld wordt verlaten via de terugknop
+  // ==========================================
+  let historyGuardPushed = false;
+
+  function ensureHistoryGuard() {
+    if (!window.history || !window.history.pushState) return;
+    if (!historyGuardPushed) {
+      try {
+        window.history.pushState({ speurtochtGuard: true }, '');
+        historyGuardPushed = true;
+      } catch (e) { }
+    }
+  }
+
+  window.addEventListener('popstate', () => {
+    if (!state.playerId) return;
+    historyGuardPushed = false;
+    ensureHistoryGuard();
+
+    if (state.inDoomscroll) {
+      goBack();
+      return;
+    }
+    if (modalOverlay && !modalOverlay.classList.contains('hidden')) {
+      closeModal();
+      return;
+    }
+  });
+
+  document.addEventListener('pointerdown', () => {
+    if (state.playerId && !historyGuardPushed) {
+      ensureHistoryGuard();
+    }
+  }, { passive: true });
 
   // Globale helpers op window
   window.closeModal = closeModal;

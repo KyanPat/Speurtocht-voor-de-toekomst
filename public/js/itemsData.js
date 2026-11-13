@@ -532,7 +532,7 @@ const ITEMS_DATA = {
         "options": [
           {
             "id": "dr4_a",
-            "text": "3 keer (1200 / 450 = 2,67 dus 3x nodig)",
+            "text": "3 keer",
             "isCorrect": true
           },
           {
@@ -635,27 +635,27 @@ const ITEMS_DATA = {
         "options": [
           {
             "id": "ji3_a",
-            "text": "09:30 uur (ruim op tijd)",
+            "text": "09:30 uur",
             "isCorrect": true
           },
           {
             "id": "ji3_b",
-            "text": "09:45 uur (precies 15 minuten vooraf)",
+            "text": "09:45 uur",
             "isCorrect": true
           },
           {
             "id": "ji3_c",
-            "text": "09:46 uur (te laat voor de 15 min eis)",
+            "text": "09:46 uur",
             "isCorrect": false
           },
           {
             "id": "ji3_d",
-            "text": "10:00 uur (te laat voor de 15 min eis)",
+            "text": "10:00 uur",
             "isCorrect": false
           },
           {
             "id": "ji3_e",
-            "text": "10:15 uur (veel te laat)",
+            "text": "10:15 uur",
             "isCorrect": false
           }
         ]
@@ -1017,12 +1017,12 @@ const ITEMS_DATA = {
         "options": [
           {
             "id": "tr2_a",
-            "text": "5 tafels (90 / 20 = 4,5 dus 5 tafels nodig)",
+            "text": "5 tafels",
             "isCorrect": true
           },
           {
             "id": "tr2_b",
-            "text": "4 tafels (dan hebben 10 gasten geen stoel)",
+            "text": "4 tafels",
             "isCorrect": false
           },
           {

@@ -417,6 +417,9 @@ function broadcastFullState() {
     generalItems: gameState.generalItems,
     leaderboard: getLeaderboard(),
     jobRaiseUnlockSecondsLeft: gameState.jobRaiseUnlockSecondsLeft,
+    trouwenUnlockSecondsLeft: gameState.trouwenUnlockSecondsLeft,
+    jobRaiseUnlockTimerActive: gameState.jobRaiseUnlockTimerActive,
+    trouwenUnlockTimerActive: gameState.trouwenUnlockTimerActive,
     activityLog: gameState.activityLog.slice(0, 15)
   });
 }
@@ -538,12 +541,29 @@ function startGame() {
         }
       }
 
+      // Actieve speler-cooldowns per seconde bijhouden (pauzeert tijdens doomscrollen)
+      Object.values(gameState.players).forEach((p) => {
+        if (!p.inDoomscroll && p.cooldowns) {
+          Object.keys(p.cooldowns).forEach((id) => {
+            if (p.cooldowns[id] > 0) {
+              p.cooldowns[id]--;
+              if (p.cooldowns[id] <= 0) {
+                delete p.cooldowns[id];
+                if (p.cooldownRewarded) delete p.cooldownRewarded[id];
+              }
+            }
+          });
+        }
+      });
+
       // Elke seconde timer tick uitzenden
       io.emit('timer:tick', {
         timeRemaining: gameState.timeRemaining,
         formattedTime: formatSeconds(gameState.timeRemaining),
         jobRaiseUnlockSecondsLeft: gameState.jobRaiseUnlockSecondsLeft,
-        trouwenUnlockSecondsLeft: gameState.trouwenUnlockSecondsLeft
+        trouwenUnlockSecondsLeft: gameState.trouwenUnlockSecondsLeft,
+        jobRaiseUnlockTimerActive: gameState.jobRaiseUnlockTimerActive,
+        trouwenUnlockTimerActive: gameState.trouwenUnlockTimerActive
       });
 
       checkGameOverCondition();
@@ -688,6 +708,9 @@ io.on('connection', (socket) => {
     generalItems: gameState.generalItems,
     leaderboard: getLeaderboard(),
     jobRaiseUnlockSecondsLeft: gameState.jobRaiseUnlockSecondsLeft,
+    trouwenUnlockSecondsLeft: gameState.trouwenUnlockSecondsLeft,
+    jobRaiseUnlockTimerActive: gameState.jobRaiseUnlockTimerActive,
+    trouwenUnlockTimerActive: gameState.trouwenUnlockTimerActive,
     activityLog: gameState.activityLog.slice(0, 15)
   });
 
@@ -1173,6 +1196,8 @@ io.on('connection', (socket) => {
       player.stats.wrongAnswers++;
       player.cooldowns = player.cooldowns || {};
       player.cooldowns[itemId] = 45; // 45 seconden straftijd
+      player.cooldownRewarded = player.cooldownRewarded || {};
+      player.cooldownRewarded[itemId] = false;
 
       addActivityLog(`❌ ${player.name} gaf een fout antwoord bij "${itemData.name}" (45s cooldown)!`, 'penalty', player.name);
 
@@ -1193,6 +1218,19 @@ io.on('connection', (socket) => {
     const player = gameState.players[playerId];
 
     if (player && player.cooldowns && player.cooldowns[itemId]) {
+      if (player.cooldownRewarded && player.cooldownRewarded[itemId]) {
+        if (callback) callback({
+          success: false,
+          alreadyClaimed: true,
+          newCooldown: player.cooldowns[itemId],
+          message: 'Je hebt de zelfbeheersingskorting voor deze cooldown al ontvangen.'
+        });
+        return;
+      }
+
+      player.cooldownRewarded = player.cooldownRewarded || {};
+      player.cooldownRewarded[itemId] = true;
+
       const oldVal = player.cooldowns[itemId];
       // Trek 15 seconden af!
       player.cooldowns[itemId] = Math.max(0, oldVal - 15);
