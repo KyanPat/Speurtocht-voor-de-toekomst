@@ -114,3 +114,4 @@ const html = convertToHtml(mdContent);
 const publicHtmlPath = path.join(__dirname, '..', 'public', 'chat-export.html');
 fs.writeFileSync(publicHtmlPath, html, 'utf8');
 console.log(`✅ HTML export geschreven naar ${publicHtmlPath} (${(html.length / 1024).toFixed(1)} KB)`);
+
