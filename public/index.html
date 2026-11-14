@@ -290,9 +290,9 @@
   </script>
 
   <!-- Applicatie Scripts met Cache Buster (v27) -->
-  <script src="/js/itemsData.js?v=29"></script>
-  <script src="/js/soundEffects.js?v=29"></script>
-  <script src="/js/notifications.js?v=29"></script>
+  <script src="/js/itemsData.js?v=30"></script>
+  <script src="/js/soundEffects.js?v=30"></script>
+  <script src="/js/notifications.js?v=30"></script>
   <script src="/js/podium.js?v=33"></script>
   <script src="/js/playerApp.js?v=33"></script>
 
@@ -308,7 +308,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=29')
+        navigator.serviceWorker.register('/sw.js?v=30')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);

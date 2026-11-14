@@ -412,9 +412,6 @@
       const name = serverItem.name || localItem?.name || id;
       const isLimited = serverItem.isLimited !== undefined ? serverItem.isLimited : (localItem?.isLimited || false);
       const maxClaims = serverItem.maxClaims || state.limitedItemsMaxClaims || 1;
-      const location = (isLimited && (serverItem.secretLocation || localItem?.secretLocation))
-        ? (serverItem.secretLocation || localItem?.secretLocation)
-        : (serverItem.location || localItem?.location || 'Nader te bepalen');
 
       const chip = document.createElement('div');
       chip.className = `p-2 rounded-xl border flex flex-col justify-between ${
@@ -425,7 +422,7 @@
           <span class="text-[10px] font-bold truncate">${name}</span>
           ${isLimited ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700/50">${maxClaims}x</span>` : ''}
         </div>
-        <span class="text-[10px] text-stone-400 truncate mt-0.5">📍 ${location}</span>
+        <span class="text-[10px] text-stone-500 truncate mt-0.5">🔒 Lokaal verborgen</span>
       `;
       container.appendChild(chip);
     });
