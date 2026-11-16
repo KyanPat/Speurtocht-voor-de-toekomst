@@ -252,24 +252,44 @@
           </div>
         </div>
 
-        <!-- Jouw Persoonlijke Resultaat Card -->
+        <!-- Opgetelde Afleidingsbar & Meest Afgeleid + Tie-Break Info -->
+        <div id="mobile-distraction-summary" class="w-full bg-stone-900/90 rounded-2xl p-3.5 border border-stone-800 mb-3 text-left space-y-2">
+          <!-- Dynamisch gevuld via playerApp.js -->
+        </div>
+
+        <!-- Jouw Persoonlijke Resultaat Card (Alle eigen stats voor iedere speler) -->
         <div class="w-full bg-stone-900/90 rounded-2xl p-3.5 border border-stone-800 mb-3 flex flex-col gap-1.5 text-left">
-          <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Jouw Resultaat</span>
+          <div class="flex items-center justify-between border-b border-stone-800 pb-1.5 mb-0.5">
+            <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider">📊 Jouw Persoonlijke Stats</span>
+            <span id="final-player-rank" class="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700/60 font-mono text-[10px] font-black">#-</span>
+          </div>
           <div class="flex justify-between items-center text-xs text-stone-300">
             <span>Eindscore:</span>
             <span id="final-player-score" class="font-bold text-emerald-400 text-sm">0 pt</span>
+          </div>
+          <div class="flex justify-between items-center text-xs text-stone-300">
+            <span>Tijd hoogste score bereikt:</span>
+            <span id="final-score-elapsed" class="font-mono font-bold text-amber-300 text-xs">-</span>
           </div>
           <div class="flex justify-between items-center text-xs text-stone-300">
             <span>Geclaimde Items:</span>
             <span id="final-player-items" class="font-bold text-white text-xs">0 / 8</span>
           </div>
           <div class="flex justify-between items-center text-xs text-stone-300">
-            <span>Zelfbeheersing Beloningen:</span>
-            <span id="final-self-control" class="font-bold text-emerald-300 text-xs">0x (-0s)</span>
+            <span>Totale Doomscroll Tijd:</span>
+            <span id="final-doomscroll-time" class="font-bold text-rose-400 text-xs">0s</span>
           </div>
           <div class="flex justify-between items-center text-xs text-stone-300">
-            <span>Tijd in Doomscroll Val:</span>
-            <span id="final-doomscroll-time" class="font-bold text-rose-400 text-xs">0 sec</span>
+            <span>Keer in Afleiding/Val getrapt:</span>
+            <span id="final-traps-count" class="font-bold text-amber-400 text-xs">0x</span>
+          </div>
+          <div class="flex justify-between items-center text-xs text-stone-300">
+            <span>Foute Antwoorden:</span>
+            <span id="final-wrong-answers" class="font-bold text-stone-200 text-xs">0x</span>
+          </div>
+          <div class="flex justify-between items-center text-xs text-stone-300">
+            <span>Zelfbeheersing Beloningen:</span>
+            <span id="final-self-control" class="font-bold text-emerald-300 text-xs">0x</span>
           </div>
         </div>
 
@@ -290,9 +310,9 @@
   </script>
 
   <!-- Applicatie Scripts met Cache Buster (v27) -->
-  <script src="/js/itemsData.js?v=30"></script>
-  <script src="/js/soundEffects.js?v=30"></script>
-  <script src="/js/notifications.js?v=30"></script>
+  <script src="/js/itemsData.js?v=32"></script>
+  <script src="/js/soundEffects.js?v=32"></script>
+  <script src="/js/notifications.js?v=32"></script>
   <script src="/js/podium.js?v=33"></script>
   <script src="/js/playerApp.js?v=33"></script>
 
@@ -308,7 +328,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=30')
+        navigator.serviceWorker.register('/sw.js?v=32')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);

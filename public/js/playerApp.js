@@ -228,8 +228,13 @@
       state.gameStatus = 'ENDED';
       window.notifications.stopAmbientDistractions();
       closeModal();
+      document.querySelectorAll('video').forEach(v => {
+        v.pause();
+        try { v.currentTime = 0; } catch (e) { }
+      });
       screens.doomscrollTrap.classList.add('hidden');
       state.inDoomscroll = false;
+      state.trapStartTime = null;
       showGameOverScreen(data);
     });
 
@@ -241,6 +246,8 @@
       state.claimedItems = [];
       state.cooldowns = {};
       state.inDoomscroll = false;
+      state.trapStartTime = null;
+      state.stats = { wrongAnswers: 0, hintsClicked: 0, selfControlRewards: 0, doomscrollSeconds: 0 };
       state.revealedLocations = {};
       localStorage.removeItem('doomscroll_revealed_locs');
       state.revealedHints = {};
@@ -3541,9 +3548,12 @@
   }
 
   function openAppFeed(appName = 'Instagram', originItemId = null) {
+    const wasInDoomscroll = state.inDoomscroll;
     state.inDoomscroll = true;
     state.currentApp = appName;
-    state.trapStartTime = state.trapStartTime || Date.now();
+    if (!wasInDoomscroll || !state.trapStartTime) {
+      state.trapStartTime = Date.now();
+    }
 
     // Reset geschiedenis stack bij nieuwe binnenkomst vanuit de kaart
     viewHistory = [];
@@ -5364,8 +5374,10 @@
       instagramReelObserver.disconnect();
       instagramReelObserver = null;
     }
-    const secondsSpent = Math.round((Date.now() - (state.trapStartTime || Date.now())) / 1000);
+    const secondsSpent = state.trapStartTime ? Math.max(0, Math.round((Date.now() - state.trapStartTime) / 1000)) : 0;
     state.inDoomscroll = false;
+    state.trapStartTime = null;
+    state.stats.doomscrollSeconds = (state.stats.doomscrollSeconds || 0) + secondsSpent;
     viewHistory = [];
     currentTrapView = null;
     socket.emit('player:exit_doomscroll', { secondsSpent });
@@ -5939,16 +5951,103 @@
     mobilePodiumTimeouts.push(t1);
   }
 
+  function renderMobileDistractionSummary(leaderboard) {
+    const box = document.getElementById('mobile-distraction-summary');
+    if (!box) return;
+
+    const list = Array.isArray(leaderboard) ? leaderboard : [];
+    if (list.length === 0) {
+      box.innerHTML = '';
+      return;
+    }
+
+    const totalDoomSec = list.reduce((sum, p) => sum + ((p.stats && p.stats.doomscrollSeconds) || 0), 0);
+    const byDistraction = [...list].sort((a, b) => ((b.stats && b.stats.doomscrollSeconds) || 0) - ((a.stats && a.stats.doomscrollSeconds) || 0));
+    const mostDistracted = byDistraction[0];
+    const mostDistractedSec = (mostDistracted && mostDistracted.stats && mostDistracted.stats.doomscrollSeconds) || 0;
+    const mostDistractedRank = list.findIndex(p => p.id === mostDistracted.id) + 1;
+
+    const top1 = list[0];
+    const tiedTop = top1 && top1.score > 0 ? list.filter(p => p.score === top1.score) : [];
+    const formatElapsed = (sec) => {
+      if (sec === null || sec === undefined) return '';
+      return `${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, '0')}`;
+    };
+
+    const tieHtml = tiedTop.length > 1 ? `
+      <div class="p-2.5 rounded-xl bg-amber-950/50 border border-amber-600/50 text-[11px] text-amber-200 flex items-start gap-2">
+        <span>⚡</span>
+        <span><strong>Gelijkspel op ${top1.score} pt!</strong> ${top1.name} kwam er als eerste${top1.scoreReachedElapsed !== null ? ` (${formatElapsed(top1.scoreReachedElapsed)})` : ''} en wint!</span>
+      </div>
+    ` : '';
+
+    const maxSec = Math.max(1, mostDistractedSec);
+    const barsHtml = byDistraction.slice(0, 3).map(p => {
+      const sec = (p.stats && p.stats.doomscrollSeconds) || 0;
+      const pct = Math.round((sec / maxSec) * 100);
+      const rank = list.findIndex(x => x.id === p.id) + 1;
+      return `
+        <div class="flex items-center gap-2 text-[10px]">
+          <span class="w-24 truncate font-bold text-stone-200">${p.avatar || '🎒'} ${p.name}</span>
+          <div class="flex-1 h-2 bg-stone-950 rounded-full overflow-hidden border border-stone-800">
+            <div class="h-full bg-gradient-to-r from-rose-600 to-amber-500 rounded-full" style="width: ${pct}%"></div>
+          </div>
+          <span class="w-10 text-right font-mono font-bold text-rose-400">${sec}s</span>
+          <span class="w-14 text-right font-mono text-stone-400">#${rank} (${p.score}pt)</span>
+        </div>
+      `;
+    }).join('');
+
+    box.innerHTML = `
+      ${tieHtml}
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-[10px] font-bold text-rose-300 uppercase tracking-wider">📱 Afleidingsbar (Insta, BeReal, WA)</span>
+        <span class="text-[10px] font-mono font-bold text-rose-300 bg-rose-950/70 px-2 py-0.5 rounded-full border border-rose-800/60">Klas: ${totalDoomSec}s</span>
+      </div>
+      <div class="text-[11px] text-stone-300 bg-stone-950/70 rounded-xl p-2 border border-stone-800 flex items-center justify-between gap-1">
+        <span class="truncate">Meest afgeleid: <strong class="text-white">${mostDistracted.avatar || '🎒'} ${mostDistracted.name}</strong></span>
+        <span class="font-mono font-bold text-rose-400 shrink-0">${mostDistractedSec}s (#${mostDistractedRank} • ${mostDistracted.score}pt)</span>
+      </div>
+      <div class="space-y-1 pt-0.5">${barsHtml}</div>
+    `;
+  }
+
   function showGameOverScreen(data) {
+    if (Array.isArray(data.leaderboard)) state.lastLeaderboard = data.leaderboard;
+    const list = state.lastLeaderboard || [];
+    const myIdx = list.findIndex(p => p.id === state.playerId);
+    const me = myIdx !== -1 ? list[myIdx] : null;
+    if (me) {
+      state.score = me.score;
+      if (me.stats) state.stats = me.stats;
+    }
+
+    const rankEl = document.getElementById('final-player-rank');
+    if (rankEl) {
+      rankEl.textContent = myIdx !== -1 ? `#${myIdx + 1} van ${list.length}` : '#-';
+    }
+
+    const elapsedEl = document.getElementById('final-score-elapsed');
+    if (elapsedEl) {
+      const sec = me && me.scoreReachedElapsed !== null && me.scoreReachedElapsed !== undefined ? me.scoreReachedElapsed : null;
+      elapsedEl.textContent = sec !== null
+        ? `Na ${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, '0')}`
+        : '-';
+    }
+
     document.getElementById('game-over-reason').textContent = data.reason;
     document.getElementById('final-player-score').textContent = `${state.score} pt`;
-    document.getElementById('final-player-items').textContent = `${(state.claimedItems || []).length} / 8`;
-    document.getElementById('final-self-control').textContent = `${state.stats.selfControlRewards || 0}x`;
+    document.getElementById('final-player-items').textContent = `${(me ? me.claimedCount : (state.claimedItems || []).length)} / 8`;
     document.getElementById('final-doomscroll-time').textContent = `${state.stats.doomscrollSeconds || 0}s`;
+    const trapsEl = document.getElementById('final-traps-count');
+    if (trapsEl) trapsEl.textContent = `${state.stats.hintsClicked || 0}x`;
+    const wrongEl = document.getElementById('final-wrong-answers');
+    if (wrongEl) wrongEl.textContent = `${state.stats.wrongAnswers || 0}x`;
+    document.getElementById('final-self-control').textContent = `${state.stats.selfControlRewards || 0}x`;
 
-    if (Array.isArray(data.leaderboard)) state.lastLeaderboard = data.leaderboard;
     state.podiumShown = true;
-    renderMobilePodium(state.lastLeaderboard || []);
+    renderMobilePodium(list);
+    renderMobileDistractionSummary(list);
     showScreen('gameOver');
   }
 

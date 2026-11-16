@@ -422,8 +422,13 @@
         <p id="ended-reason-label" class="text-sm text-stone-400 mt-1 mb-6">De 15 minuten zijn verstreken.</p>
 
         <!-- Podium Top 3 met geanimeerde onthulling -->
-        <div id="podium-top3-grid" class="grid grid-cols-3 gap-3 md:gap-5 w-full max-w-2xl mb-8 items-end min-h-[380px]">
+        <div id="podium-top3-grid" class="grid grid-cols-3 gap-3 md:gap-5 w-full max-w-2xl mb-6 items-end min-h-[380px]">
           <!-- Dynamisch gevuld -->
+        </div>
+
+        <!-- Opgetelde Afleidingsbar & Gelijkspel Tie-Break Overzicht -->
+        <div id="ended-distraction-summary" class="w-full bg-stone-900/90 rounded-2xl p-5 border border-stone-800 text-left mb-5 space-y-3">
+          <!-- Dynamisch gevuld door digibordApp.js -->
         </div>
 
         <!-- Nabespreking Klasvragen -->
@@ -627,8 +632,8 @@
 
   <!-- Scripts (v27) -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/itemsData.js?v=30"></script>
-  <script src="/js/soundEffects.js?v=30"></script>
+  <script src="/js/itemsData.js?v=32"></script>
+  <script src="/js/soundEffects.js?v=32"></script>
   <script src="/js/podium.js?v=33"></script>
   <script src="/js/digibordApp.js?v=33"></script>
 </body>

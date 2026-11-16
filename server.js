@@ -398,11 +398,19 @@ function getLeaderboard() {
     inDoomscroll: p.inDoomscroll || false,
     activeCooldownCount: Object.keys(p.cooldowns || {}).filter(k => p.cooldowns[k] > 0).length,
     connected: p.connected,
+    lastScoreReachedAt: p.lastScoreReachedAt || null,
+    scoreReachedElapsed: p.scoreReachedElapsed !== undefined ? p.scoreReachedElapsed : null,
     stats: p.stats
   }));
 
-  // Sorteren op score aflopend, daarna op aantal items
-  playersList.sort((a, b) => b.score - a.score || b.claimedCount - a.claimedCount);
+  // Sorteren op hoogste score; bij gelijke stand: wie als EERSTE dit aantal punten bereikte
+  playersList.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const tA = a.lastScoreReachedAt || Number.MAX_SAFE_INTEGER;
+    const tB = b.lastScoreReachedAt || Number.MAX_SAFE_INTEGER;
+    if (tA !== tB) return tA - tB;
+    return b.claimedCount - a.claimedCount;
+  });
   return playersList;
 }
 
@@ -593,6 +601,16 @@ function endGame(reason = 'TIJD_VERLOPEN') {
     gameTimerInterval = null;
   }
 
+  // Tel eventueel nog lopende doomscroll-tijd op voor spelers die nog in Insta/BeReal/WhatsApp/TikTok zaten
+  Object.values(gameState.players).forEach(p => {
+    if (p.inDoomscroll && p.doomscrollEnteredAt) {
+      const extraSec = Math.max(0, Math.round((Date.now() - p.doomscrollEnteredAt) / 1000));
+      p.stats.doomscrollSeconds = (p.stats.doomscrollSeconds || 0) + extraSec;
+    }
+    p.inDoomscroll = false;
+    p.doomscrollEnteredAt = null;
+  });
+
   const finalLeaderboard = getLeaderboard();
   const winner = finalLeaderboard[0] || null;
 
@@ -670,9 +688,12 @@ function resetGame() {
   // Reset spelers scores en geclaimde items, behoud namen en avatars
   Object.values(gameState.players).forEach(p => {
     p.score = 0;
+    p.lastScoreReachedAt = null;
+    p.scoreReachedElapsed = null;
     p.claimedItems = [];
     p.cooldowns = {};
     p.inDoomscroll = false;
+    p.doomscrollEnteredAt = null;
     p.stats = {
       wrongAnswers: 0,
       hintsClicked: 0,
@@ -727,9 +748,12 @@ io.on('connection', (socket) => {
         name: cleanName,
         avatar: avatar || '🎒',
         score: 0,
+        lastScoreReachedAt: null,
+        scoreReachedElapsed: null,
         claimedItems: [],
         cooldowns: {}, // itemId -> remainingSeconds
         inDoomscroll: false,
+        doomscrollEnteredAt: null,
         connected: true,
         stats: {
           wrongAnswers: 0,
@@ -1103,6 +1127,8 @@ io.on('connection', (socket) => {
       // 1. Antwoord is GOED!
       const points = itemData.points || 1;
       player.score += points;
+      player.lastScoreReachedAt = Date.now();
+      player.scoreReachedElapsed = Math.max(0, (gameState.totalDuration || 900) - (gameState.timeRemaining || 0));
       player.claimedItems = player.claimedItems || [];
       player.claimedItems.push(itemId);
 
@@ -1254,6 +1280,9 @@ io.on('connection', (socket) => {
     const playerId = socket.data.playerId || data.playerId;
     const player = gameState.players[playerId];
     if (player) {
+      if (!player.inDoomscroll) {
+        player.doomscrollEnteredAt = Date.now();
+      }
       player.inDoomscroll = true;
       player.stats.hintsClicked++;
       addActivityLog(`📱 ${player.name} trapte in de Doomscroll val en kijkt video's! (Cooldown gepauzeerd)`, 'trap', player.name);
@@ -1264,12 +1293,16 @@ io.on('connection', (socket) => {
   // DOOMSCROLL VAL VERLATEN
   socket.on('player:exit_doomscroll', (data) => {
     const playerId = socket.data.playerId || data.playerId;
-    const { secondsSpent = 0 } = data;
     const player = gameState.players[playerId];
     if (player) {
+      let secondsSpent = Number(data && data.secondsSpent) || 0;
+      if (secondsSpent <= 0 && player.doomscrollEnteredAt) {
+        secondsSpent = Math.round((Date.now() - player.doomscrollEnteredAt) / 1000);
+      }
       player.inDoomscroll = false;
-      player.stats.doomscrollSeconds += secondsSpent;
-      addActivityLog(`🏃 ${player.name} is ontsnapt uit de Doomscroll val na ${secondsSpent}s!`, 'info', player.name);
+      player.doomscrollEnteredAt = null;
+      player.stats.doomscrollSeconds = (player.stats.doomscrollSeconds || 0) + Math.max(0, secondsSpent);
+      addActivityLog(`🏃 ${player.name} is ontsnapt uit de Doomscroll val na ${Math.max(0, secondsSpent)}s!`, 'info', player.name);
       broadcastFullState();
     }
   });

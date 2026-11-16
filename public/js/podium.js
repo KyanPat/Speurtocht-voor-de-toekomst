@@ -242,6 +242,12 @@
     grid.innerHTML = '';
 
     const list = Array.isArray(leaderboard) ? leaderboard : [];
+    const formatElapsed = (sec) => {
+      if (sec === null || sec === undefined) return '';
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    };
 
     const buildColumn = (rank) => {
       const cfg = CONFIGS[rank];
@@ -257,6 +263,14 @@
         return col;
       }
 
+      const doomSec = (player.stats && player.stats.doomscrollSeconds) || 0;
+      const hasTie = player.score > 0 && list.some((other, idx) => idx !== (rank - 1) && other.score === player.score);
+      const isTieWinner = hasTie && list.findIndex(o => o.score === player.score) === (rank - 1);
+      const elapsedStr = formatElapsed(player.scoreReachedElapsed);
+      const speedBadge = hasTie
+        ? `<div class="mt-0.5 text-[9px] font-bold ${isTieWinner ? 'text-amber-300' : 'text-stone-400'}">${isTieWinner ? `⚡ Eerst op ${player.score} pt` : '⏱️ Later op score'}${elapsedStr ? ` (${elapsedStr})` : ''}</div>`
+        : (elapsedStr ? `<div class="mt-0.5 text-[9px] text-stone-400 font-mono">⏱️ ${elapsedStr}</div>` : '');
+
       col.innerHTML = `
         <div class="flex flex-col items-center text-center mb-2 w-full">
           <div class="${compact ? 'w-[4.5rem] h-[4.5rem]' : 'w-20 h-20 sm:w-28 sm:h-28'} rounded-3xl overflow-hidden shadow-2xl relative mb-1.5 flex items-center justify-center">
@@ -264,6 +278,8 @@
           </div>
           <span class="text-xs ${compact ? '' : 'sm:text-sm'} font-black text-white truncate max-w-full px-1">${player.name}</span>
           <span class="text-[11px] ${compact ? '' : 'sm:text-xs'} font-mono font-bold text-emerald-400">${player.score} pt</span>
+          ${speedBadge}
+          <div class="mt-0.5 text-[9px] font-mono font-bold text-rose-300 bg-rose-950/60 border border-rose-800/50 rounded-md px-1.5 py-0.5">📱 ${doomSec}s afgeleid</div>
           <div class="mt-1 px-1.5 py-0.5 rounded-lg border ${compact ? 'text-[8.5px]' : 'text-[9px] sm:text-[10px]'} font-bold leading-tight max-w-full ${cfg.badgeClass}">
             ${cfg.badgeText}
           </div>

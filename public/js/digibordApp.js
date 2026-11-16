@@ -964,10 +964,109 @@
     }
   }
 
+  function renderEndedDistractionSummary(leaderboard) {
+    const box = document.getElementById('ended-distraction-summary');
+    if (!box) return;
+
+    const list = Array.isArray(leaderboard) ? leaderboard : [];
+    if (list.length === 0) {
+      box.innerHTML = '<span class="text-xs text-stone-500">Geen spelersgegevens beschikbaar.</span>';
+      return;
+    }
+
+    const totalDoomSec = list.reduce((sum, p) => sum + ((p.stats && p.stats.doomscrollSeconds) || 0), 0);
+    const byDistraction = [...list].sort((a, b) => ((b.stats && b.stats.doomscrollSeconds) || 0) - ((a.stats && a.stats.doomscrollSeconds) || 0));
+    const mostDistracted = byDistraction[0];
+    const mostDistractedSec = (mostDistracted && mostDistracted.stats && mostDistracted.stats.doomscrollSeconds) || 0;
+    const mostDistractedRank = list.findIndex(p => p.id === mostDistracted.id) + 1;
+
+    // Controleer of er een gelijkspel was om de hoogste score
+    const top1 = list[0];
+    const tiedTop = top1 && top1.score > 0 ? list.filter(p => p.score === top1.score) : [];
+    const formatElapsed = (sec) => {
+      if (sec === null || sec === undefined) return '';
+      return `${Math.floor(sec / 60)}:${(sec % 60).toString().padStart(2, '0')}`;
+    };
+
+    const tieHtml = tiedTop.length > 1 ? `
+      <div class="p-3 rounded-xl bg-amber-950/50 border border-amber-600/50 flex items-center gap-2.5 text-xs text-amber-200">
+        <span class="text-lg">⚡</span>
+        <div>
+          <span class="font-black text-amber-300">Gelijkspel op ${top1.score} punten!</span>
+          <span class="text-amber-100/90"> <strong>${top1.name}</strong> kwam als eerste op ${top1.score} pt${top1.scoreReachedElapsed !== null ? ` (na ${formatElapsed(top1.scoreReachedElapsed)})` : ''} en wint!</span>
+        </div>
+      </div>
+    ` : '';
+
+    const maxSec = Math.max(1, mostDistractedSec);
+    const barsHtml = byDistraction.slice(0, 5).map(p => {
+      const sec = (p.stats && p.stats.doomscrollSeconds) || 0;
+      const pct = Math.round((sec / maxSec) * 100);
+      const rank = list.findIndex(x => x.id === p.id) + 1;
+      return `
+        <div class="flex items-center gap-2 text-[11px]">
+          <span class="w-28 truncate font-bold text-stone-200">${p.avatar || '🎒'} ${p.name}</span>
+          <div class="flex-1 h-2.5 bg-stone-950 rounded-full overflow-hidden border border-stone-800">
+            <div class="h-full bg-gradient-to-r from-rose-600 to-amber-500 rounded-full" style="width: ${pct}%"></div>
+          </div>
+          <span class="w-14 text-right font-mono font-bold text-rose-400">${sec}s</span>
+          <span class="w-16 text-right font-mono text-stone-400">#${rank} (${p.score}pt)</span>
+        </div>
+      `;
+    }).join('');
+
+    const allPlayersStatsHtml = list.map((p, idx) => {
+      const s = p.stats || {};
+      const elapsed = p.scoreReachedElapsed !== null && p.scoreReachedElapsed !== undefined ? formatElapsed(p.scoreReachedElapsed) : '-';
+      return `
+        <div class="grid grid-cols-12 items-center gap-1 py-1.5 px-2.5 rounded-xl bg-stone-950/60 border border-stone-800/80 text-[11px]">
+          <span class="col-span-4 truncate font-bold text-white"><span class="text-stone-400 font-mono mr-1">#${idx + 1}</span>${p.avatar || '🎒'} ${p.name}</span>
+          <span class="col-span-2 text-right font-mono font-bold text-emerald-400">${p.score} pt</span>
+          <span class="col-span-2 text-right font-mono text-amber-300" title="Tijd hoogste score">${elapsed}</span>
+          <span class="col-span-2 text-right font-mono text-rose-400" title="Doomscroll tijd">📱 ${s.doomscrollSeconds || 0}s</span>
+          <span class="col-span-2 text-right font-mono text-stone-400" title="Fouten / Zelfbeheersing">❌${s.wrongAnswers || 0} • 🛡️${s.selfControlRewards || 0}</span>
+        </div>
+      `;
+    }).join('');
+
+    box.innerHTML = `
+      ${tieHtml}
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-rose-400 text-lg">smartphone</span>
+          <span class="text-xs font-bold text-rose-300 uppercase tracking-wider">Opgetelde Afleidingsbar (Insta, BeReal, WhatsApp, TikTok)</span>
+        </div>
+        <span class="px-2.5 py-1 rounded-full bg-rose-950/80 border border-rose-700/60 text-rose-300 font-mono text-xs font-black">
+          Totaal klas: ${totalDoomSec}s afgeleid
+        </span>
+      </div>
+      <div class="p-3 rounded-xl bg-stone-950/80 border border-stone-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div>
+          <span class="text-stone-400">Meest afgeleid:</span>
+          <strong class="text-white ml-1">${mostDistracted.avatar || '🎒'} ${mostDistracted.name}</strong>
+          <span class="text-rose-400 font-mono font-bold ml-1">(${mostDistractedSec}s)</span>
+        </div>
+        <span class="text-[11px] font-semibold text-stone-300">
+          Eindigde als <strong class="text-amber-300">#${mostDistractedRank}</strong> met <strong>${mostDistracted.score} pt</strong>
+        </span>
+      </div>
+      <div class="space-y-1.5 pt-1">
+        ${barsHtml}
+      </div>
+      <div class="pt-3 border-t border-stone-800 space-y-1.5">
+        <span class="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">📊 Alle Spelers & Eigen Stats (Score • Tijd • Afleiding • Fouten/Zelfbeheersing)</span>
+        <div class="space-y-1 max-h-48 overflow-y-auto pr-1">
+          ${allPlayersStatsHtml}
+        </div>
+      </div>
+    `;
+  }
+
   function renderPodium(leaderboard, reason) {
     const podiumGrid = document.getElementById('podium-top3-grid');
     const reasonLabel = document.getElementById('ended-reason-label');
     if (reasonLabel && reason) reasonLabel.textContent = reason;
+    renderEndedDistractionSummary(leaderboard);
     if (!podiumGrid) return;
 
     // Gedeeld podium (zelfde als op de telefoons)
