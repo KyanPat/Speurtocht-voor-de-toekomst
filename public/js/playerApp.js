@@ -494,23 +494,6 @@
         leaveLobby();
       });
     }
-
-    const restartBtn = document.getElementById('btn-restart-player');
-    if (restartBtn) {
-      restartBtn.addEventListener('click', () => {
-        if (window.sounds) window.sounds.playClick();
-        screens.gameOver.classList.add('hidden');
-        state.gameStatus = 'LOBBY';
-        state.score = 0;
-        state.claimedItems = [];
-        state.cooldowns = {};
-        state.inDoomscroll = false;
-        closeModal();
-        updatePlayerBar();
-        showScreen(state.playerName ? 'lobbyWait' : 'login');
-        socket.emit('player:restart_lobby');
-      });
-    }
   }
 
   function updateLobbyPlayerList(players) {

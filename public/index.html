@@ -293,9 +293,9 @@
           </div>
         </div>
 
-        <button id="btn-restart-player" type="button" class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs shadow-md transition cursor-pointer">
-          Terug naar de Lobby
-        </button>
+        <p class="text-[11px] text-stone-400 font-medium pt-1">
+          Wacht tot de spelleider het volgende spel start op het Digibord.
+        </p>
       </div>
     </div>
 
@@ -310,9 +310,9 @@
   </script>
 
   <!-- Applicatie Scripts met Cache Buster (v27) -->
-  <script src="/js/itemsData.js?v=32"></script>
-  <script src="/js/soundEffects.js?v=32"></script>
-  <script src="/js/notifications.js?v=32"></script>
+  <script src="/js/itemsData.js?v=33"></script>
+  <script src="/js/soundEffects.js?v=33"></script>
+  <script src="/js/notifications.js?v=33"></script>
   <script src="/js/podium.js?v=33"></script>
   <script src="/js/playerApp.js?v=33"></script>
 
@@ -321,14 +321,14 @@
     if ('caches' in window) {
       caches.keys().then(keys => {
         keys.forEach(k => {
-          if (k !== 'doomscroll-escape-v32') caches.delete(k);
+          if (k !== 'doomscroll-escape-v33') caches.delete(k);
         });
       });
     }
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=32')
+        navigator.serviceWorker.register('/sw.js?v=33')
           .then(reg => {
             reg.update();
             console.log('ServiceWorker geregistreerd met scope:', reg.scope);
